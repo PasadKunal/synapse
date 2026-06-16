@@ -75,6 +75,8 @@ def run_agent_task(self, task_id: str, user_input: str, user_id: str):
     - Retries up to 3 times with 30s delay if an unexpected error occurs
     - Task ID is deterministic so duplicate submissions don't double-run
     """
+    import time as _time
+    _task_start = _time.perf_counter()
     log.info("task_started", task_id=task_id, user_id=user_id)
     _update_task_status(task_id, "running")
 
@@ -129,6 +131,15 @@ def run_agent_task(self, task_id: str, user_input: str, user_id: str):
                 asyncio.run(_store())
         except Exception as mem_exc:
             log.warning("memory_store_failed", task_id=task_id, error=str(mem_exc))
+
+        # Record metrics and check for anomalies
+        try:
+            import time as _time
+            from observability.anomaly_detector import record_task_metrics
+            elapsed_ms = int((_time.perf_counter() - _task_start) * 1000)
+            record_task_metrics(tokens=token_cost, latency_ms=elapsed_ms, task_id=task_id)
+        except Exception as obs_exc:
+            log.warning("anomaly_check_failed", error=str(obs_exc))
 
         log.info("task_done", task_id=task_id, tokens=token_cost)
         return {"answer": final_answer, "tokens_used": token_cost}

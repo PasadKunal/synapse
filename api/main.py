@@ -13,6 +13,8 @@ from api.websocket_handler import ws_router
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    from observability.otel_config import setup_tracing
+    setup_tracing(app)
     yield
     await engine.dispose()
 

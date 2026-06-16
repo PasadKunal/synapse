@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.database import engine
 from api.models import Base
-from api.routes import auth, tasks
+from api.routes import auth, feedback, tasks
 from api.websocket_handler import ws_router
 
 
@@ -34,6 +34,7 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/auth")
 app.include_router(tasks.router, prefix="/tasks")
+app.include_router(feedback.router, prefix="/feedback")
 app.include_router(ws_router)
 
 

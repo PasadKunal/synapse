@@ -108,6 +108,28 @@ def run_agent_task(self, task_id: str, user_input: str, user_id: str):
             result={"answer": final_answer},
             token_cost=token_cost,
         )
+
+        # Store a summary of this conversation in episodic memory
+        # so future tasks by the same user can benefit from it
+        try:
+            from memory.summarizer import summarize_conversation
+            from memory.episodic_store import store_episode
+            import asyncio
+
+            summary = summarize_conversation(result_state.get("messages", []))
+            if summary:
+                session = _get_sync_session()
+                # Run async store in a new event loop (Celery workers are sync)
+                async def _store():
+                    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+                    engine = create_async_engine(settings.database_url)
+                    async with AsyncSession(engine) as s:
+                        await store_episode(s, user_id, summary, task_id)
+                    await engine.dispose()
+                asyncio.run(_store())
+        except Exception as mem_exc:
+            log.warning("memory_store_failed", task_id=task_id, error=str(mem_exc))
+
         log.info("task_done", task_id=task_id, tokens=token_cost)
         return {"answer": final_answer, "tokens_used": token_cost}
 

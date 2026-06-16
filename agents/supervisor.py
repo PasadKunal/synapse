@@ -49,11 +49,10 @@ def _parse_decision(text: str) -> dict:
 def supervisor_node(state: AgentState) -> dict:
     log.info("supervisor", task_id=state["task_id"], loop=state["loop_count"])
 
+    # System prompt must be first so Groq follows JSON-only instructions
     memory_block = build_context_block(state.get("memory_context", []))
-    system = SYSTEM_PROMPT + memory_block
-
-    # Build message history for the supervisor
-    messages = [{"role": "user", "content": state["input"]}]
+    messages = [{"role": "system", "content": SYSTEM_PROMPT + memory_block}]
+    messages.append({"role": "user", "content": state["input"]})
     messages.extend(state.get("messages", []))
 
     response_text, tokens = call_groq(

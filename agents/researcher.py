@@ -1,5 +1,5 @@
 import structlog
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 
 from agents.base import SPECIALIST_MODEL, build_context_block, call_groq
 from agents.state import AgentState

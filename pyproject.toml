@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=72", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "synapse"
@@ -26,11 +26,13 @@ dependencies = [
     # Task queue
     "celery[redis]>=5.4.0",
 
-    # LLM providers
-    "anthropic>=0.40.0",
-    "openai>=1.51.0",
+    # LLM providers (Groq free tier as primary)
     "groq>=0.11.0",
     "langfuse>=2.53.0",
+
+    # Local embeddings (no API cost)
+    "sentence-transformers>=3.3.0",
+    "torch>=2.4.0",
 
     # LangGraph
     "langgraph>=0.2.50",

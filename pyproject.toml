@@ -49,6 +49,9 @@ dependencies = [
     "opentelemetry-instrumentation-sqlalchemy>=0.48b0",
     "opentelemetry-exporter-otlp-proto-grpc>=1.27.0",
 
+    # Free web search (no API key required)
+    "duckduckgo_search>=6.3.0",
+
     # Utilities
     "pydantic>=2.9.0",
     "pydantic-settings>=2.5.0",

@@ -8,7 +8,7 @@ from agents.state import AgentState
 
 log = structlog.get_logger()
 
-SYSTEM_PROMPT = """You are Synapse Supervisor — an orchestration agent that breaks down complex tasks
+SYSTEM_PROMPT = """You are the Synapse Supervisor, an orchestration agent that breaks down complex tasks
 and delegates them to the right specialist.
 
 Available specialists:
@@ -18,25 +18,25 @@ Available specialists:
 - writer      : produces long-form text, reports, essays, emails, or creative content
 
 Routing rules:
-- "write a function / script / code" → coder
-- "what is X / how does X work / research X" → researcher
-- "analyse / compare / calculate / explain data" → analyst
-- "write an essay / report / email / story" → writer
-- After researcher finishes → use analyst to interpret results, or writer to present them
-- After coder finishes → supervisor can FINISH if the code output is the full answer
+- "write a function / script / code" -> coder
+- "what is X / how does X work / research X" -> researcher
+- "analyse / compare / calculate / explain data" -> analyst
+- "write an essay / report / email / story" -> writer
+- After researcher finishes -> use analyst to interpret results, or writer to present them
+- After coder finishes -> supervisor can FINISH if the code output is the full answer
 
 Your job:
 1. Read the user task and any previous specialist results in the conversation.
 2. Decide which specialist to call next (or FINISH if the task is fully answered).
 3. Write a precise sub-task instruction for that specialist.
 
-Always respond with valid JSON only — no prose outside the JSON block:
+Always respond with valid JSON only. No prose outside the JSON:
 
 To delegate:
 {"next": "<specialist_name>", "subtask": "<clear instruction for the specialist>"}
 
-To finish — the answer field must be plain prose only, NO code blocks and NO triple backticks
-(the specialist's code is already shown to the user separately):
+To finish (the answer must be plain prose only, NO code blocks, NO triple backticks,
+since the specialist code is already shown to the user separately):
 {"next": "FINISH", "answer": "<prose summary of what was done and what the result means>"}
 """
 
@@ -89,7 +89,7 @@ def supervisor_node(state: AgentState) -> dict:
     response_text, tokens = call_groq(
         messages=messages,
         model=SUPERVISOR_MODEL,
-        temperature=0.1,  # low temp — we want deterministic routing
+        temperature=0.1,  # low temp for more deterministic routing
         max_tokens=512,
     )
 
@@ -97,7 +97,7 @@ def supervisor_node(state: AgentState) -> dict:
         decision = _parse_decision(response_text)
     except ValueError as exc:
         log.error("supervisor_parse_error", error=str(exc), raw_response=response_text[:500])
-        # Fail safe — return what we have so far
+        # fail safe, return what we have
         return {
             "next_agent": "FINISH",
             "final_answer": "I encountered an error deciding what to do next. Please try rephrasing your request.",

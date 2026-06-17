@@ -1,13 +1,13 @@
 """
-Slack alerter — sends a message to a Slack channel when an anomaly
-is detected. Uses an Incoming Webhook URL (free, no bot token needed).
+Sends a Slack alert when an anomaly is detected.
+Uses an Incoming Webhook URL (free, no bot token needed).
 
-Setup (free):
-1. Go to api.slack.com/apps → Create app → Incoming Webhooks
-2. Enable webhooks, add to a channel, copy the URL
+Setup:
+1. Go to api.slack.com/apps, create an app, enable Incoming Webhooks
+2. Add to a channel and copy the URL
 3. Set SLACK_WEBHOOK_URL in your .env
 
-If the webhook URL is not set, alerts are just logged — nothing breaks.
+If the webhook URL is not set, alerts are logged locally and nothing breaks.
 """
 
 import json

@@ -74,7 +74,7 @@ export function TaskDashboard() {
   return (
     <div style={{ display: "flex", height: "calc(100vh - 60px)", overflow: "hidden" }}>
 
-      {/* ── Sidebar ── */}
+      {/* Sidebar */}
       <aside style={{
         width: 264, flexShrink: 0, display: "flex", flexDirection: "column",
         background: "#0b0b16", borderRight: "1px solid rgba(255,255,255,0.06)",
@@ -120,7 +120,7 @@ export function TaskDashboard() {
         </div>
       </aside>
 
-      {/* ── Main ── */}
+      {/* Main */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#08080f" }}>
 
         {/* Input bar */}
@@ -130,7 +130,7 @@ export function TaskDashboard() {
               ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleSubmit()}
               disabled={submitting}
-              placeholder="Ask anything — research, code, analysis, writing…"
+              placeholder="Ask anything: research, code, analysis, writing..."
               style={{
                 flex: 1, padding: "13px 18px", borderRadius: 12, fontSize: 14,
                 background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
@@ -200,7 +200,7 @@ export function TaskDashboard() {
   );
 }
 
-/* ── Sidebar Item ── */
+/* Sidebar Item */
 function SidebarItem({ task, selected, onClick }: { task: Task; selected: boolean; onClick: () => void }) {
   const dotColor: Record<string, string> = {
     pending: "#f59e0b", running: "#60a5fa", done: "#34d399", failed: "#f87171",
@@ -240,7 +240,7 @@ function SidebarItem({ task, selected, onClick }: { task: Task; selected: boolea
   );
 }
 
-/* ── Task Answer Card ── */
+/* Task Answer Card */
 function TaskAnswer({ task, showTrace, onToggleTrace }: { task: Task; showTrace: boolean; onToggleTrace: () => void }) {
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
   const answer = task.result?.answer ?? task.result?.error ?? "";
@@ -271,7 +271,7 @@ function TaskAnswer({ task, showTrace, onToggleTrace }: { task: Task; showTrace:
               {task.token_cost.toLocaleString()} tok
             </span>
           )}
-          {/* Trace toggle — always visible */}
+          {/* Trace toggle */}
           <button onClick={onToggleTrace}
               style={{
                 display: "flex", alignItems: "center", gap: 5, padding: "3px 10px", borderRadius: 20,
@@ -338,7 +338,7 @@ function TaskAnswer({ task, showTrace, onToggleTrace }: { task: Task; showTrace:
   );
 }
 
-/* ── Markdown renderer — NO prose wrapper, fully inline-styled ── */
+/* Markdown renderer, no Tailwind prose wrapper to avoid CSS conflicts */
 function RunningPlaceholder() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "8px 0" }}>
@@ -452,7 +452,7 @@ function MarkdownContent({ content }: { content: string }) {
   );
 }
 
-/* ── Empty state ── */
+/* Empty state */
 function EmptyState({ onExample }: { onExample: (p: string) => void }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "calc(100vh - 160px)", padding: "40px 24px" }}>

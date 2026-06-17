@@ -1,8 +1,8 @@
 """
-Redis-backed working memory — hot, fast, temporary.
+Redis-backed working memory. Hot, fast, and temporary.
 
-Each key lives for 1 hour (TTL). Used to pass intermediate results
-between agent nodes without bloating the LangGraph state object.
+Each key lives for 1 hour. Used to pass intermediate results between
+agent nodes without bloating the LangGraph state object.
 Also handles Redis pub/sub to stream agent spans to WebSocket clients.
 """
 

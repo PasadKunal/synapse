@@ -2,9 +2,8 @@
 pgvector episodic memory store.
 
 Stores task outputs as text chunks with 384-dim embeddings.
-Retrieval uses MMR (Maximal Marginal Relevance) to return
-results that are both relevant AND diverse — avoids returning
-5 near-identical chunks when the DB has redundant entries.
+Retrieval uses MMR (Maximal Marginal Relevance) to return results
+that are both relevant and diverse, avoiding redundant chunks.
 """
 
 import uuid

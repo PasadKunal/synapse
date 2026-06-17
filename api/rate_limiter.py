@@ -46,6 +46,6 @@ def get_limiter() -> TokenBucketLimiter:
 
 
 async def rate_limit_dependency(request: Request) -> None:
-    """FastAPI dependency — attach to routes that need rate limiting."""
+    """FastAPI dependency for routes that need rate limiting."""
     user_id = request.state.user_id if hasattr(request.state, "user_id") else request.client.host
     await get_limiter().check(user_id)

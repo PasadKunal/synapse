@@ -18,7 +18,7 @@ export function TraceViewer({
 }: {
   taskId: string;
   onClose: () => void;
-  preloadedSpans?: Span[];   // replay mode — no WebSocket opened
+  preloadedSpans?: Span[];   // if provided, skip WebSocket and replay these spans
   onSpan?: (span: Span) => void; // bubble spans up for storage
 }) {
   const [spans, setSpans] = useState<Span[]>(preloadedSpans ?? []);

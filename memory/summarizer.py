@@ -1,7 +1,6 @@
 """
-Memory compaction — summarises long conversation histories into a short
-chunk before storing them in episodic memory. Keeps the episodic store
-dense and retrieval precise.
+Summarises conversation histories before storing them in episodic memory.
+Keeps the episodic store dense and retrieval precise.
 """
 
 import structlog
@@ -12,7 +11,7 @@ log = structlog.get_logger()
 
 SUMMARIZE_PROMPT = """Summarise the following agent conversation into 3-5 bullet points.
 Focus on: what was asked, what was found/built, and the key conclusions.
-Be concise — this summary will be used as context for future related tasks."""
+Be concise. This summary will be used as context for future related tasks."""
 
 
 def summarize_conversation(messages: list[dict]) -> str:

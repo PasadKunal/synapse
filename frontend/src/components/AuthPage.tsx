@@ -12,7 +12,7 @@ const FEATURES = [
       </svg>
     ),
     title: "Multi-Agent Routing",
-    desc: "Supervisor automatically dispatches tasks to the right specialist — Researcher, Coder, Analyst, or Writer.",
+    desc: "Supervisor automatically dispatches tasks to the right specialist: Researcher, Coder, Analyst, or Writer.",
   },
   {
     icon: (
@@ -21,7 +21,7 @@ const FEATURES = [
       </svg>
     ),
     title: "Live Execution Traces",
-    desc: "Watch every agent step in real time — token usage, latency, and decisions streamed as they happen.",
+    desc: "Watch every agent step in real time. Token usage, latency, and decisions are all streamed live.",
   },
   {
     icon: (
@@ -60,7 +60,7 @@ export function AuthPage() {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#08080f" }}>
 
-      {/* ── Left Brand Panel ── */}
+      {/* Left Brand Panel */}
       <div style={{
         flex: "0 0 52%", display: "flex", flexDirection: "column", justifyContent: "space-between",
         padding: "48px 56px", position: "relative", overflow: "hidden",
@@ -103,7 +103,7 @@ export function AuthPage() {
             </span>
           </h1>
           <p style={{ fontSize: 16, color: "#6b6b8a", lineHeight: 1.65, maxWidth: 380, marginBottom: 48 }}>
-            Synapse routes your requests to specialised AI agents that research, code, analyse, and write — with full transparency.
+            Synapse routes your requests to specialised AI agents that research, code, analyse, and write. Full transparency included.
           </p>
 
           {/* Feature list */}
@@ -137,7 +137,7 @@ export function AuthPage() {
         </div>
       </div>
 
-      {/* ── Right Form Panel ── */}
+      {/* Right Form Panel */}
       <div style={{
         flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
         padding: "48px 40px", background: "#080812",
@@ -213,7 +213,7 @@ export function AuthPage() {
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
               </svg>
             )}
-            Continue with Demo — no signup needed
+            Continue with Demo, no signup needed
           </button>
 
           <p style={{ fontSize: 11, color: "#252538", textAlign: "center", marginTop: 24 }}>
@@ -225,7 +225,7 @@ export function AuthPage() {
   );
 }
 
-/* ── Sub-components ── */
+/* Sub-components */
 
 function Field({ label, type, value, onChange, placeholder }: {
   label: string; type: string; value: string;

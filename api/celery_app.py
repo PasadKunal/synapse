@@ -8,13 +8,10 @@ from api.config import settings
 
 log = structlog.get_logger()
 
-# ── Celery app ────────────────────────────────────────────────────────────────
-# Broker: Redis (receives tasks)
-# Backend: Redis (stores task results so we can poll them)
 celery_app = Celery(
     "synapse",
     broker=settings.redis_url,
-    backend=settings.redis_url.replace("/0", "/1"),  # separate DB for results
+    backend=settings.redis_url.replace("/0", "/1"),  # separate Redis DB for results
 )
 
 celery_app.conf.update(
@@ -32,7 +29,6 @@ celery_app.conf.update(
 )
 
 
-# ── DB helpers (sync, used inside Celery worker) ──────────────────────────────
 
 def _get_sync_session():
     """Synchronous DB session for use inside Celery tasks (not async)."""
@@ -60,7 +56,6 @@ def _update_task_status(task_id: str, status: str, result: dict | None = None, t
         session.close()
 
 
-# ── Main agent task ───────────────────────────────────────────────────────────
 
 @celery_app.task(
     name="api.celery_app.run_agent_task",
@@ -191,5 +186,4 @@ def run_agent_task(self, task_id: str, user_input: str, user_id: str):
     except Exception as exc:
         log.error("task_failed", task_id=task_id, error=str(exc))
         _update_task_status(task_id, "failed", result={"error": str(exc)})
-        # Retry with exponential backoff — delay doubles each retry
         raise self.retry(exc=exc, countdown=30 * (2 ** self.request.retries))

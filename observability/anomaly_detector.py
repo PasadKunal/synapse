@@ -1,11 +1,10 @@
 """
-Welford online algorithm for real-time anomaly detection.
+Real-time anomaly detection using the Welford online algorithm.
 
-Tracks mean and variance of token costs and latencies using a
-single-pass algorithm that uses O(1) memory — no matter how many
-data points we've seen, we only store 3 numbers (n, mean, M2).
+Tracks mean and variance of token costs and latencies. No matter how
+many data points we've seen, only 3 numbers are stored (n, mean, M2).
 
-When a new data point is more than `z_threshold` standard deviations
+When a new data point is more than z_threshold standard deviations
 from the mean, it's flagged as anomalous and triggers an alert.
 """
 
@@ -32,7 +31,7 @@ class WelfordDetector:
     def update(self, value: float) -> bool:
         """
         Add a new observation. Returns True if the value is anomalous.
-        The first `min_samples` values are never flagged — we need
+        The first min_samples values are never flagged since we need
         enough data to establish a baseline first.
         """
         self.n += 1
@@ -82,9 +81,7 @@ class WelfordDetector:
         }
 
 
-# ── Global detector instances ─────────────────────────────────────────────────
-# One per metric — these live for the lifetime of the process
-
+# One detector per metric, both live for the lifetime of the process
 token_detector = WelfordDetector("tokens_per_task", z_threshold=3.0)
 latency_detector = WelfordDetector("latency_ms", z_threshold=3.0)
 

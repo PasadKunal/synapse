@@ -1,8 +1,8 @@
-# ⚡ Synapse
+# Synapse
 
-**Autonomous multi-agent orchestration and observability platform — built entirely on free-tier services.**
+Autonomous multi-agent platform built entirely on free-tier services.
 
-Synapse decomposes natural-language tasks into subtasks, routes them to specialist AI agents, streams execution traces to a real-time dashboard, and stores episodic memory for context-aware future runs.
+Synapse breaks down natural-language tasks into subtasks, routes them to specialist AI agents, streams execution traces to a live dashboard, and stores episodic memory so future runs have context.
 
 ---
 
@@ -11,9 +11,9 @@ Synapse decomposes natural-language tasks into subtasks, routes them to speciali
 ![Synapse UI](https://raw.githubusercontent.com/PasadKunal/synapse/main/docs/demo.png)
 
 - Submit any task (research, code, analysis, writing)
-- Watch the **Live Trace** show each agent as it runs
+- Watch the **Live Trace** show each agent step as it runs
 - Expand completed tasks to read syntax-highlighted answers
-- Give 👍 / 👎 feedback to generate DPO training pairs
+- Give thumbs up or down feedback to save DPO training pairs
 
 ---
 
@@ -21,18 +21,18 @@ Synapse decomposes natural-language tasks into subtasks, routes them to speciali
 
 ```
 Browser
-  │  (HTTP / WebSocket)
-  ▼
-FastAPI ──► Celery Worker ──► LangGraph Graph
-  │              │                  │
-  │         Redis pub/sub      Supervisor
-  │         (span stream)    ┌──────┴──────┐
-  │              │        Researcher    Coder
-  │              │        Analyst      Writer
-  ▼              ▼
-WebSocket   Redis (hot memory, TTL 1h)
-  │         pgvector (episodic memory, 384-dim)
-  ▼
+  |  (HTTP / WebSocket)
+  v
+FastAPI --> Celery Worker --> LangGraph Graph
+  |              |                  |
+  |         Redis pub/sub      Supervisor
+  |         (span stream)    .----------.
+  |              |        Researcher  Coder
+  |              |        Analyst    Writer
+  v              v
+WebSocket   Redis (working memory, TTL 1h)
+  |         pgvector (episodic memory, 384-dim)
+  v
 TraceViewer (real-time spans + token bar chart)
 ```
 
@@ -40,13 +40,13 @@ TraceViewer (real-time spans + token bar chart)
 
 | Agent | Model | Role |
 |---|---|---|
-| **Supervisor** | llama-3.3-70b-versatile | Decomposes tasks, routes to specialists, synthesizes final answer |
+| **Supervisor** | llama-3.3-70b-versatile | Breaks down tasks, routes to specialists, writes the final answer |
 | **Researcher** | llama-3.1-8b-instant | DuckDuckGo web search + synthesis |
 | **Coder** | llama-3.1-8b-instant | Code generation + sandboxed subprocess execution |
 | **Analyst** | llama-3.1-8b-instant | Data reasoning and structured analysis |
 | **Writer** | llama-3.1-8b-instant | Long-form content and explanation |
 
-The Supervisor runs first, picks a specialist, then runs again after the specialist finishes — continuing until the task is complete or the token budget / loop limit is hit.
+The Supervisor runs first, picks a specialist, then runs again after the specialist finishes. This loop continues until the task is fully answered or the loop limit is reached.
 
 ---
 
@@ -77,7 +77,7 @@ The Supervisor runs first, picks a specialist, then runs again after the special
 ### Prerequisites
 
 - Python 3.12+
-- Docker Desktop (for Postgres + Redis)
+- Docker Desktop (for Postgres and Redis)
 - Node.js 18+
 - A free [Groq API key](https://console.groq.com)
 
@@ -100,7 +100,7 @@ cp .env.example .env
 #   SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
 ```
 
-### 3. Start Postgres + Redis
+### 3. Start Postgres and Redis
 
 ```bash
 docker compose -f infra/docker-compose.yml up postgres redis -d
@@ -112,24 +112,26 @@ docker compose -f infra/docker-compose.yml up postgres redis -d
 alembic upgrade head
 ```
 
-### 5. Start all three processes (three terminals)
+### 5. Start all three processes
+
+Open three terminal tabs:
 
 ```bash
-# Terminal 1 — API
+# Terminal 1: API
 uvicorn api.main:app --reload
 
-# Terminal 2 — Celery worker
+# Terminal 2: Celery worker
 celery -A api.celery_app worker --loglevel=info --queues=agent_tasks
 
-# Terminal 3 — Frontend
+# Terminal 3: Frontend
 cd frontend && npm install && npm run dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-### Dev login
+### Demo login
 
-On the login screen, click **Dev Login** to generate a local JWT token — no Google OAuth setup required for development.
+Click **Continue with Demo** on the login screen to get started immediately without signing up.
 
 ---
 
@@ -140,21 +142,21 @@ synapse/
 ├── agents/
 │   ├── state.py          # AgentState TypedDict
 │   ├── base.py           # Groq client, model constants
-│   ├── supervisor.py     # Task decomposition + routing
+│   ├── supervisor.py     # Task decomposition and routing
 │   ├── researcher.py     # DuckDuckGo web search
-│   ├── coder.py          # Code generation + subprocess exec
+│   ├── coder.py          # Code generation and subprocess execution
 │   ├── analyst.py        # Structured analysis
 │   ├── writer.py         # Long-form content
 │   └── graph.py          # LangGraph StateGraph assembly
 ├── memory/
 │   ├── embeddings.py     # sentence-transformers (local, 384-dim)
-│   ├── episodic_store.py # pgvector MMR retrieval + semantic cache
+│   ├── episodic_store.py # pgvector MMR retrieval and semantic cache
 │   └── summarizer.py     # Groq-based conversation compaction
 ├── api/
-│   ├── main.py           # FastAPI app + lifespan
-│   ├── celery_app.py     # Celery task + span streaming
-│   ├── models.py         # SQLAlchemy models (6 tables)
-│   ├── auth.py           # JWT + Google OAuth
+│   ├── main.py           # FastAPI app and lifespan
+│   ├── celery_app.py     # Celery task and span streaming
+│   ├── models.py         # SQLAlchemy models (5 tables)
+│   ├── auth.py           # JWT and Google OAuth
 │   ├── rate_limiter.py   # Token-bucket (Redis-backed)
 │   ├── websocket_handler.py  # /ws/{task_id} span relay
 │   └── routes/           # /tasks, /feedback, /auth
@@ -163,13 +165,13 @@ synapse/
 ├── frontend/
 │   └── src/
 │       ├── components/
-│       │   ├── TaskDashboard.tsx  # Task input + history
+│       │   ├── TaskDashboard.tsx  # Task input and history sidebar
 │       │   └── TraceViewer.tsx    # Live WebSocket span stream
-│       └── api/client.ts          # Typed API + WebSocket client
+│       └── api/client.ts          # Typed API and WebSocket client
 ├── infra/
-│   ├── docker-compose.yml  # postgres + redis + api + worker + flower
+│   ├── docker-compose.yml  # postgres, redis, api, worker, flower
 │   ├── Dockerfile
-│   └── ci.yml              # GitHub Actions (ruff + mypy + pytest)
+│   └── ci.yml              # GitHub Actions (ruff, mypy, pytest)
 └── alembic/                # Async migrations (pgvector enabled)
 ```
 
@@ -181,21 +183,21 @@ synapse/
 
 1. User submits a task via the frontend
 2. FastAPI creates a `Task` record (status: `pending`) and enqueues a Celery job
-3. The Celery worker runs `agent_graph.stream()` — publishing a Redis pub/sub span after each node completes
-4. The FastAPI WebSocket handler (`/ws/{task_id}`) subscribes to that channel and forwards spans to the browser in real time
+3. The Celery worker runs `agent_graph.stream()`, publishing a Redis pub/sub span after each node completes
+4. The FastAPI WebSocket handler (`/ws/{task_id}`) subscribes to that channel and forwards spans to the browser
 5. The TraceViewer component renders each span as it arrives
 6. After the graph finishes, the worker writes the final answer to Postgres (status: `done`)
-7. The frontend's 2-second poll picks up the completed task and renders the answer
+7. The frontend polls every 2 seconds and renders the completed answer
 
 ### Memory System
 
-- **Semantic cache**: Before running the agent graph, the input is embedded and compared against recent queries (cosine > 0.92 → return cached answer instantly)
-- **Hot memory**: Redis stores the working context (messages, tool results) for the duration of the task
-- **Episodic memory**: After each task, a Groq-generated summary is embedded and stored in pgvector; retrieved via MMR for future tasks by the same user
+- **Semantic cache**: Input is embedded and compared against recent queries. Cosine similarity above 0.92 returns the cached answer instantly without running agents.
+- **Hot memory**: Redis stores the working context (messages, tool results) for the duration of each task, with a 1-hour TTL.
+- **Episodic memory**: After each task, a Groq-generated summary is embedded and stored in pgvector. Future tasks by the same user retrieve relevant memories via MMR.
 
 ### Anomaly Detection
 
-The `WelfordDetector` class tracks a running mean and variance of token cost and latency using the Welford online algorithm (O(1) memory). Any value with z-score > 3.0 triggers a structured log warning.
+The `WelfordDetector` class tracks a running mean and variance of token cost and latency using the Welford online algorithm (O(1) memory). Any value more than 3 standard deviations from the mean is flagged and triggers a structured log warning.
 
 ---
 
@@ -207,8 +209,8 @@ The `WelfordDetector` class tracks a running mean and variance of token cost and
 | subprocess code execution | E2B cloud sandbox | No API key, no cost, sufficient for demos |
 | sentence-transformers local model | OpenAI embeddings API | Free, runs offline |
 | DuckDuckGo ddgs | SerpAPI / Bing | No API key required |
-| Celery `worker_pool=solo` | prefork (default) | PyTorch/OpenMP crash on `fork()` (macOS + Python 3.14) |
-| `operator.add` on AgentState fields | Manual merge | Safe concurrent appending for `messages` and `tokens_used` |
+| Celery `worker_pool=solo` | prefork (default) | PyTorch/OpenMP crash on fork() on macOS + Python 3.14 |
+| `operator.add` on AgentState fields | Manual merge | Safe concurrent appending for messages and tokens_used |
 
 ---
 
@@ -216,10 +218,12 @@ The `WelfordDetector` class tracks a running mean and variance of token cost and
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/auth/dev-token` | Generate dev JWT (no OAuth) |
+| `POST` | `/auth/register` | Create a new account |
+| `POST` | `/auth/login` | Log in with email and password |
+| `POST` | `/auth/demo` | One-click demo login, no signup needed |
 | `POST` | `/tasks/` | Create and enqueue a task |
 | `GET` | `/tasks/` | List last 50 tasks |
-| `GET` | `/tasks/{id}` | Get task status + result |
-| `POST` | `/feedback/tasks/{id}/feedback` | Submit 👍/👎 (saves DPO pair) |
+| `GET` | `/tasks/{id}` | Get task status and result |
+| `POST` | `/feedback/tasks/{id}/feedback` | Submit thumbs up or down (saves DPO pair) |
 | `WS` | `/ws/{task_id}` | Real-time span stream |
 | `GET` | `/health` | Health check |

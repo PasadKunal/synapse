@@ -14,7 +14,7 @@ Synthesise them into a clear, factual answer to the sub-task.
 
 
 def _web_search(query: str, max_results: int = 5) -> list[dict]:
-    """DuckDuckGo search — completely free, no API key required."""
+    """Run a DuckDuckGo text search. Free, no API key needed."""
     try:
         with DDGS() as ddgs:
             return list(ddgs.text(query, max_results=max_results))

@@ -1,10 +1,10 @@
 """
-Local sentence-transformers embeddings — completely free, no API calls.
+Local sentence-transformers embeddings, no API calls needed.
 
 Model: all-MiniLM-L6-v2
 - 384-dimensional vectors
 - ~80MB download on first use (cached in ~/.cache/huggingface)
-- Runs on CPU — fast enough for this use case
+- Runs on CPU, fast enough for this use case
 """
 
 import structlog
@@ -34,7 +34,7 @@ def embed(text: str) -> list[float]:
 
 
 def embed_batch(texts: list[str]) -> list[list[float]]:
-    """Embed multiple texts at once — faster than calling embed() in a loop."""
+    """Embed multiple texts in a single batch, faster than calling embed() one by one."""
     model = get_model()
     vectors = model.encode(texts, normalize_embeddings=True, batch_size=32)
     return [v.tolist() for v in vectors]

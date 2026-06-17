@@ -115,7 +115,7 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
 
 @router.post("/demo", response_model=TokenResponse)
 async def demo_login(db: AsyncSession = Depends(get_db)):
-    """One-click demo login — creates the shared demo user if it doesn't exist."""
+    """One-click demo login. Creates the shared demo user if it does not exist yet."""
     result = await db.execute(select(User).where(User.id == DEMO_USER_ID))
     user = result.scalar_one_or_none()
 

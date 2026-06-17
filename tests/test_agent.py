@@ -20,7 +20,7 @@ BASE_URL = "http://localhost:8000"
 
 
 def make_test_token(user_id: str = "00000000-0000-0000-0000-000000000001") -> str:
-    """Generate a valid JWT for testing — same logic as create_access_token()."""
+    """Generate a valid JWT for testing, same logic as create_access_token()."""
     from datetime import datetime, timedelta, timezone
     expire = datetime.now(timezone.utc) + timedelta(hours=1)
     return jwt.encode(
@@ -99,7 +99,7 @@ async def main():
                 print(task["result"])
                 break
         else:
-            print(f"\n⚠️  Timed out after 120s — check Celery worker logs")
+            print(f"\n⚠️  Timed out after 120s. Check Celery worker logs.")
 
 
 if __name__ == "__main__":

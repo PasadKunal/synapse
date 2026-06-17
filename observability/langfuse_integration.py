@@ -1,9 +1,9 @@
 """
-Langfuse integration — optional LLM tracing.
+Optional Langfuse LLM tracing.
 
 If LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY are set in .env,
 every agent call will be traced. If the keys are absent the app
-runs normally — tracing is silently skipped.
+runs normally and tracing is silently skipped.
 
 Free tier: 50k events/month at cloud.langfuse.com.
 """

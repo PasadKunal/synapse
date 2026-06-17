@@ -12,7 +12,6 @@ from api.config import settings
 
 log = structlog.get_logger()
 
-# ── Safety guard nodes ────────────────────────────────────────────────────────
 
 def budget_check_node(state: AgentState) -> dict:
     """Stop the graph if the token budget is exhausted."""
@@ -24,7 +23,7 @@ def budget_check_node(state: AgentState) -> dict:
             "next_agent": "FINISH",
             "final_answer": f"Token budget reached. Best result so far:\n\n{last}",
         }
-    return {}  # pass-through — no state change
+    return {}
 
 
 def loop_check_node(state: AgentState) -> dict:
@@ -36,10 +35,8 @@ def loop_check_node(state: AgentState) -> dict:
             "next_agent": "FINISH",
             "final_answer": f"Max iterations reached. Best result so far:\n\n{last}",
         }
-    return {}  # pass-through
+    return {}
 
-
-# ── Routing logic ─────────────────────────────────────────────────────────────
 
 def _route_from_supervisor(state: AgentState) -> str:
     """Read next_agent and return the node name to visit."""
@@ -55,8 +52,6 @@ def _route_after_safety(state: AgentState) -> str:
         return END
     return "supervisor"
 
-
-# ── Graph assembly ────────────────────────────────────────────────────────────
 
 def build_graph():
     """
@@ -110,10 +105,9 @@ def build_graph():
         {"supervisor": "supervisor", END: END},
     )
 
-    # In-memory checkpointer for now — swap with RedisSaver in production
     checkpointer = MemorySaver()
     return graph.compile(checkpointer=checkpointer)
 
 
-# Singleton — built once at import time
+# Module-level singleton
 agent_graph = build_graph()

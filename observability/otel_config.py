@@ -1,10 +1,10 @@
 """
-OpenTelemetry setup — distributed tracing for every HTTP request,
-database query, and background task.
+OpenTelemetry setup for distributed tracing across HTTP requests,
+database queries, and background tasks.
 
 Traces are exported to an OTLP collector (configured via env var).
 During local dev with no collector running, traces are printed to
-the console instead so you can still see what's happening.
+the console so you can still see what's happening.
 """
 
 import os

@@ -7,12 +7,12 @@ from api.config import settings
 
 log = structlog.get_logger()
 
-# One shared Groq client — free tier, no cost
+# One shared Groq client
 groq_client = Groq(api_key=settings.groq_api_key)
 
-# Model aliases — swap these when you want to upgrade
+# Model constants, swap these to upgrade
 SUPERVISOR_MODEL = "llama-3.3-70b-versatile"   # strongest free model for routing decisions
-SPECIALIST_MODEL = "llama-3.1-8b-instant"       # fast + free for specialist work
+SPECIALIST_MODEL = "llama-3.1-8b-instant"       # fast and free for specialist work
 
 
 def call_groq(

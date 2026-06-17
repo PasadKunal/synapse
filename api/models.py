@@ -49,7 +49,7 @@ class Task(Base):
 
 
 class AgentSpan(Base):
-    """One record per agent call — used to render the trace viewer in the frontend."""
+    """One record per agent call, used to render the trace viewer in the frontend."""
 
     __tablename__ = "agent_spans"
 
@@ -66,7 +66,7 @@ class AgentSpan(Base):
 
 
 class EpisodicMemory(Base):
-    """Long-term memory — stores text chunks with pgvector embeddings for semantic retrieval."""
+    """Long-term memory. Stores text chunks with pgvector embeddings for semantic retrieval."""
 
     __tablename__ = "episodic_memory"
 

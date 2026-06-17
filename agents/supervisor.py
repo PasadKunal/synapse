@@ -35,8 +35,9 @@ Always respond with valid JSON only — no prose outside the JSON block:
 To delegate:
 {"next": "<specialist_name>", "subtask": "<clear instruction for the specialist>"}
 
-To finish (use markdown in the answer — wrap code in ```language blocks, use headings and lists):
-{"next": "FINISH", "answer": "<final consolidated markdown answer to the user>"}
+To finish — the answer field must be plain prose only, NO code blocks and NO triple backticks
+(the specialist's code is already shown to the user separately):
+{"next": "FINISH", "answer": "<prose summary of what was done and what the result means>"}
 """
 
 
@@ -84,7 +85,7 @@ def supervisor_node(state: AgentState) -> dict:
     try:
         decision = _parse_decision(response_text)
     except ValueError as exc:
-        log.error("supervisor_parse_error", error=str(exc))
+        log.error("supervisor_parse_error", error=str(exc), raw_response=response_text[:500])
         # Fail safe — return what we have so far
         return {
             "next_agent": "FINISH",

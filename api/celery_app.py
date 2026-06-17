@@ -123,8 +123,29 @@ def run_agent_task(self, task_id: str, user_input: str, user_id: str):
         # After streaming, get the full final state via invoke for the merged result
         result_state = agent_graph.get_state(config).values
 
-        final_answer = result_state.get("final_answer") or "No answer produced."
+        supervisor_answer = result_state.get("final_answer") or ""
         token_cost = result_state.get("tokens_used", 0)
+
+        # Prefer specialist output (contains actual code/research with proper markdown).
+        # The supervisor's prose summary becomes a footer if it parsed cleanly.
+        specialist_content = None
+        for msg in reversed(result_state.get("messages", [])):
+            content = msg.get("content", "")
+            for prefix in ("Coder result:\n", "Researcher result:\n", "Analyst result:\n", "Writer result:\n"):
+                if content.startswith(prefix):
+                    specialist_content = content[len(prefix):].strip()
+                    break
+            if specialist_content:
+                break
+
+        if specialist_content:
+            bad_answer = not supervisor_answer or "encountered an error" in supervisor_answer
+            if bad_answer:
+                final_answer = specialist_content
+            else:
+                final_answer = f"{specialist_content}\n\n---\n\n{supervisor_answer}"
+        else:
+            final_answer = supervisor_answer or "No answer produced."
 
         # Publish FINISH sentinel so WebSocket client knows it's done
         _redis_sync.publish(f"spans:{task_id}", _json.dumps({"agent_name": "FINISH", "tokens_used": 0, "latency_ms": 0}))

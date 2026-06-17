@@ -5,11 +5,11 @@ import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { api, type Task } from "../api/client";
 import { TraceViewer } from "./TraceViewer";
 
-const EXAMPLE_PROMPTS = [
-  "Write a binary search function in Python",
-  "Explain how transformers work in machine learning",
-  "Compare REST vs GraphQL APIs",
-  "Write a script to find duplicate files in a folder",
+const EXAMPLES = [
+  "Write a binary search in Python",
+  "Explain how neural networks work",
+  "Compare REST vs GraphQL",
+  "Analyse time complexity of quicksort",
 ];
 
 export function TaskDashboard() {
@@ -20,18 +20,16 @@ export function TaskDashboard() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    api.listTasks().then(setTasks).catch(() => {});
-  }, []);
+  useEffect(() => { api.listTasks().then(setTasks).catch(() => {}); }, []);
 
   useEffect(() => {
     if (!activeTaskId) return;
     pollRef.current = setInterval(async () => {
       try {
         const task = await api.getTask(activeTaskId);
-        setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
+        setTasks(prev => prev.map(t => t.id === task.id ? task : t));
         if (task.status === "done" || task.status === "failed") {
           clearInterval(pollRef.current!);
           setSelectedTaskId(task.id);
@@ -44,104 +42,86 @@ export function TaskDashboard() {
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!input.trim() || submitting) return;
-    setSubmitting(true);
-    setError("");
-    setSelectedTaskId(null);
+    setSubmitting(true); setError(""); setSelectedTaskId(null);
     try {
       const task = await api.createTask(input.trim());
-      setTasks((prev) => [task, ...prev]);
+      setTasks(prev => [task, ...prev]);
       setActiveTaskId(task.id);
       setSelectedTaskId(task.id);
       setInput("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create task");
-    } finally {
-      setSubmitting(false);
-    }
+    } finally { setSubmitting(false); }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSubmit();
-  };
-
-  const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
+  const selectedTask = tasks.find(t => t.id === selectedTaskId) ?? null;
 
   return (
-    <div className="flex h-[calc(100vh-57px)] overflow-hidden">
-      {/* ── Sidebar ─────────────────────────────────────────── */}
-      <aside className="w-72 flex-shrink-0 border-r border-gray-800/60 flex flex-col bg-gray-950">
-        <div className="p-4 border-b border-gray-800/60">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Task History</p>
+    <div className="flex h-[calc(100vh-56px)] overflow-hidden">
+
+      {/* ── Sidebar ── */}
+      <aside className="w-64 flex-shrink-0 border-r border-white/[0.05] flex flex-col bg-[#0a0a15]">
+        <div className="px-4 py-3 border-b border-white/[0.05]">
+          <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Task History</p>
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto py-1 scrollbar-thin">
           {tasks.length === 0 ? (
-            <div className="p-4 text-center text-xs text-gray-600 mt-8">
-              <p>No tasks yet.</p>
-              <p className="mt-1">Run your first task →</p>
+            <div className="px-4 py-8 text-center">
+              <p className="text-xs text-slate-600">No tasks yet</p>
             </div>
           ) : (
-            <div className="py-2">
-              {tasks.map((task) => (
-                <SidebarItem
-                  key={task.id}
-                  task={task}
-                  isSelected={task.id === selectedTaskId}
-                  onClick={() => {
-                    setSelectedTaskId(task.id);
-                    if (task.status === "running" || task.status === "pending") {
-                      setActiveTaskId(task.id);
-                    }
-                  }}
-                />
-              ))}
-            </div>
+            tasks.map(task => (
+              <SidebarItem
+                key={task.id}
+                task={task}
+                isSelected={task.id === selectedTaskId}
+                onClick={() => {
+                  setSelectedTaskId(task.id);
+                  if (task.status === "running" || task.status === "pending") setActiveTaskId(task.id);
+                }}
+              />
+            ))
           )}
         </div>
       </aside>
 
-      {/* ── Main content ────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Input area */}
-        <div className="p-5 border-b border-gray-800/60 flex-shrink-0">
-          <form onSubmit={handleSubmit}>
-            <div className="relative">
-              <textarea
-                ref={textareaRef}
-                rows={2}
+      {/* ── Main ── */}
+      <div className="flex-1 flex flex-col overflow-hidden bg-[#07070e]">
+
+        {/* Input bar */}
+        <div className="px-6 py-4 border-b border-white/[0.05] flex-shrink-0">
+          <form onSubmit={handleSubmit} className="flex items-center gap-3">
+            <div className="flex-1 relative">
+              <input
+                ref={inputRef}
+                type="text"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
+                onChange={e => setInput(e.target.value)}
                 disabled={submitting}
-                placeholder="Ask anything — research, code, analysis, writing..."
-                className="w-full bg-gray-900 border border-gray-700/80 rounded-xl px-4 py-3 pr-24 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-purple-500/70 focus:ring-1 focus:ring-purple-500/20 resize-none transition"
+                placeholder="Ask anything — research, code, analysis, writing…"
+                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500/50 focus:bg-white/[0.05] focus:ring-1 focus:ring-violet-500/15 transition-all"
+                onKeyDown={e => { if (e.key === "Enter") handleSubmit(); }}
               />
-              <button
-                type="submit"
-                disabled={submitting || !input.trim()}
-                className="absolute right-3 bottom-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"
-              >
-                {submitting ? (
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Running
-                  </span>
-                ) : (
-                  <>Run <span className="opacity-50 text-[10px]">⌘↵</span></>
-                )}
-              </button>
             </div>
-            {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
+            <button
+              type="submit"
+              disabled={submitting || !input.trim()}
+              className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-30 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-3 rounded-xl transition-colors shadow-lg shadow-violet-900/30 flex-shrink-0"
+            >
+              {submitting ? (
+                <><span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Running</>
+              ) : "Run →"}
+            </button>
           </form>
 
-          {/* Example prompts */}
+          {error && <p className="text-red-400 text-xs mt-2 ml-1">{error}</p>}
+
+          {/* Example chips — only when no tasks */}
           {tasks.length === 0 && (
             <div className="flex flex-wrap gap-2 mt-3">
-              {EXAMPLE_PROMPTS.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => { setInput(p); textareaRef.current?.focus(); }}
-                  className="text-xs text-gray-500 hover:text-purple-400 bg-gray-800/50 hover:bg-gray-800 border border-gray-700/50 hover:border-purple-500/30 rounded-lg px-3 py-1.5 transition-colors"
-                >
+              {EXAMPLES.map(p => (
+                <button key={p} onClick={() => { setInput(p); inputRef.current?.focus(); }}
+                  className="text-xs text-slate-500 hover:text-slate-300 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.07] hover:border-violet-500/30 rounded-lg px-3 py-1.5 transition-all">
                   {p}
                 </button>
               ))}
@@ -149,30 +129,18 @@ export function TaskDashboard() {
           )}
         </div>
 
-        {/* Content area */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          {/* Live trace for active task */}
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
           {activeTaskId && (
-            <TraceViewer
-              taskId={activeTaskId}
-              onClose={() => setActiveTaskId(null)}
-            />
+            <TraceViewer taskId={activeTaskId} onClose={() => setActiveTaskId(null)} />
           )}
 
-          {/* Selected task answer */}
-          {selectedTask && selectedTask.result && (
+          {selectedTask?.result && (
             <TaskAnswer task={selectedTask} />
           )}
 
-          {/* Empty state */}
           {!selectedTask && !activeTaskId && tasks.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-center py-20">
-              <div className="text-5xl mb-4">⚡</div>
-              <h2 className="text-xl font-semibold text-gray-300 mb-2">Ready to run</h2>
-              <p className="text-sm text-gray-500 max-w-xs">
-                Type a task above or pick an example. The AI will research, code, analyse, or write — and stream each step live.
-              </p>
-            </div>
+            <EmptyState onExample={(p) => { setInput(p); inputRef.current?.focus(); }} />
           )}
         </div>
       </div>
@@ -180,34 +148,27 @@ export function TaskDashboard() {
   );
 }
 
-function SidebarItem({
-  task, isSelected, onClick,
-}: {
-  task: Task;
-  isSelected: boolean;
-  onClick: () => void;
-}) {
-  const dot = {
-    pending: "bg-yellow-500",
-    running: "bg-blue-500 animate-pulse",
-    done: "bg-green-500",
+function SidebarItem({ task, isSelected, onClick }: { task: Task; isSelected: boolean; onClick: () => void }) {
+  const statusDot: Record<string, string> = {
+    pending: "bg-amber-500",
+    running: "bg-blue-400 animate-pulse",
+    done: "bg-emerald-500",
     failed: "bg-red-500",
-  }[task.status];
-
+  };
   return (
-    <button
-      onClick={onClick}
-      className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors border-l-2 ${
+    <button onClick={onClick}
+      className={`w-full text-left px-4 py-2.5 flex items-start gap-2.5 transition-all group border-l-2 ${
         isSelected
-          ? "bg-purple-950/40 border-purple-500 text-gray-100"
-          : "border-transparent hover:bg-gray-800/40 text-gray-400 hover:text-gray-200"
-      }`}
-    >
-      <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${dot}`} />
-      <div className="min-w-0">
+          ? "border-violet-500 bg-violet-500/[0.08] text-slate-200"
+          : "border-transparent hover:bg-white/[0.03] text-slate-500 hover:text-slate-300"
+      }`}>
+      <span className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${statusDot[task.status]}`} />
+      <div className="min-w-0 flex-1">
         <p className="text-xs truncate leading-relaxed">{task.input}</p>
         {task.token_cost > 0 && (
-          <p className="text-[10px] text-gray-600 mt-0.5">{task.token_cost.toLocaleString()} tokens</p>
+          <p className={`text-[10px] mt-0.5 ${isSelected ? "text-slate-500" : "text-slate-700 group-hover:text-slate-600"}`}>
+            {task.token_cost.toLocaleString()} tokens
+          </p>
         )}
       </div>
     </button>
@@ -216,37 +177,32 @@ function SidebarItem({
 
 function TaskAnswer({ task }: { task: Task }) {
   const [feedbackSent, setFeedbackSent] = useState<"up" | "down" | null>(null);
-
-  const handleFeedback = async (up: boolean) => {
-    try {
-      await api.submitFeedback(task.id, up);
-      setFeedbackSent(up ? "up" : "down");
-    } catch { /* ignore */ }
-  };
-
   const answer = task.result?.answer ?? task.result?.error ?? "";
 
   return (
-    <div className="bg-gray-900/60 border border-gray-800/60 rounded-xl overflow-hidden">
-      {/* Task header */}
-      <div className="px-5 py-3 border-b border-gray-800/60 flex items-center justify-between">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
-            task.status === "done" ? "bg-green-500" : "bg-red-500"
-          }`} />
-          <p className="text-sm text-gray-300 truncate">{task.input}</p>
+    <div className="bg-[#0e0e1c] border border-white/[0.07] rounded-2xl overflow-hidden">
+      {/* Header */}
+      <div className="px-5 py-3.5 border-b border-white/[0.05] flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${task.status === "done" ? "bg-emerald-500" : "bg-red-500"}`} />
+          <p className="text-sm text-slate-300 font-medium truncate">{task.input}</p>
         </div>
-        <span className="text-xs text-gray-600 flex-shrink-0 ml-3">
-          {task.token_cost.toLocaleString()} tokens
-        </span>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <span className="text-[11px] text-slate-600 font-mono">{task.token_cost.toLocaleString()} tok</span>
+          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+            task.status === "done"
+              ? "text-emerald-400 bg-emerald-500/10"
+              : "text-red-400 bg-red-500/10"
+          }`}>{task.status}</span>
+        </div>
       </div>
 
-      {/* Answer */}
-      <div className="px-5 py-4">
+      {/* Answer body */}
+      <div className="px-5 py-5">
         {task.status === "failed" ? (
           <p className="text-red-400 text-sm">{answer}</p>
         ) : (
-          <div className="prose prose-invert prose-sm max-w-none text-gray-300 leading-relaxed">
+          <div className="prose prose-invert prose-sm max-w-none text-slate-300 leading-relaxed">
             <ReactMarkdown
               components={{
                 code({ className, children, ...props }) {
@@ -257,22 +213,23 @@ function TaskAnswer({ task }: { task: Task }) {
                       style={oneDark}
                       language={match ? match[1] : "python"}
                       PreTag="div"
-                      customStyle={{ borderRadius: "0.5rem", fontSize: "0.8rem" }}
+                      customStyle={{ borderRadius: "0.75rem", fontSize: "0.78rem", background: "#0d0d1a", border: "1px solid rgba(255,255,255,0.07)" }}
                     >
                       {String(children).replace(/\n$/, "")}
                     </SyntaxHighlighter>
                   ) : (
-                    <code className="bg-gray-800 px-1.5 py-0.5 rounded text-purple-300 text-xs font-mono" {...props}>
-                      {children}
-                    </code>
+                    <code className="bg-white/[0.07] text-violet-300 text-xs font-mono px-1.5 py-0.5 rounded" {...props}>{children}</code>
                   );
                 },
-                h1: ({ children }) => <h1 className="text-lg font-bold text-gray-100 mt-4 mb-2">{children}</h1>,
-                h2: ({ children }) => <h2 className="text-base font-semibold text-gray-200 mt-3 mb-1.5">{children}</h2>,
-                h3: ({ children }) => <h3 className="text-sm font-semibold text-gray-200 mt-2 mb-1">{children}</h3>,
-                strong: ({ children }) => <strong className="font-semibold text-gray-200">{children}</strong>,
-                a: ({ children, href }) => <a href={href} className="text-purple-400 hover:underline" target="_blank" rel="noreferrer">{children}</a>,
-                hr: () => <hr className="border-gray-700 my-4" />,
+                h1: ({ children }) => <h1 className="text-base font-bold text-slate-100 mt-5 mb-2">{children}</h1>,
+                h2: ({ children }) => <h2 className="text-sm font-semibold text-slate-200 mt-4 mb-1.5">{children}</h2>,
+                h3: ({ children }) => <h3 className="text-sm font-semibold text-slate-300 mt-3 mb-1">{children}</h3>,
+                strong: ({ children }) => <strong className="font-semibold text-slate-200">{children}</strong>,
+                p: ({ children }) => <p className="text-slate-400 leading-relaxed mb-3">{children}</p>,
+                li: ({ children }) => <li className="text-slate-400">{children}</li>,
+                a: ({ href, children }) => <a href={href} className="text-violet-400 hover:text-violet-300 hover:underline" target="_blank" rel="noreferrer">{children}</a>,
+                hr: () => <hr className="border-white/[0.07] my-4" />,
+                blockquote: ({ children }) => <blockquote className="border-l-2 border-violet-500/40 pl-4 text-slate-500 italic">{children}</blockquote>,
               }}
             >
               {answer}
@@ -283,35 +240,51 @@ function TaskAnswer({ task }: { task: Task }) {
 
       {/* Feedback */}
       {task.status === "done" && (
-        <div className="px-5 pb-4 flex items-center gap-2">
-          <span className="text-xs text-gray-600">Was this helpful?</span>
-          <button
-            onClick={() => handleFeedback(true)}
+        <div className="px-5 pb-4 flex items-center gap-2.5 border-t border-white/[0.04] pt-3.5">
+          <span className="text-[11px] text-slate-600 font-medium">Helpful?</span>
+          <button onClick={async () => { await api.submitFeedback(task.id, true); setFeedbackSent("up"); }}
             disabled={!!feedbackSent}
-            className={`text-xs px-3 py-1 rounded-lg border transition-colors ${
+            className={`text-xs px-3 py-1 rounded-lg border font-medium transition-all ${
               feedbackSent === "up"
-                ? "bg-green-900/50 border-green-700 text-green-400"
-                : "bg-gray-800 border-gray-700 text-gray-400 hover:border-green-600 hover:text-green-400"
-            }`}
-          >
+                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                : "bg-white/[0.03] border-white/[0.08] text-slate-500 hover:text-emerald-400 hover:border-emerald-500/30"
+            }`}>
             👍 Yes
           </button>
-          <button
-            onClick={() => handleFeedback(false)}
+          <button onClick={async () => { await api.submitFeedback(task.id, false); setFeedbackSent("down"); }}
             disabled={!!feedbackSent}
-            className={`text-xs px-3 py-1 rounded-lg border transition-colors ${
+            className={`text-xs px-3 py-1 rounded-lg border font-medium transition-all ${
               feedbackSent === "down"
-                ? "bg-red-900/50 border-red-700 text-red-400"
-                : "bg-gray-800 border-gray-700 text-gray-400 hover:border-red-600 hover:text-red-400"
-            }`}
-          >
+                ? "bg-red-500/15 border-red-500/30 text-red-400"
+                : "bg-white/[0.03] border-white/[0.08] text-slate-500 hover:text-red-400 hover:border-red-500/30"
+            }`}>
             👎 No
           </button>
-          {feedbackSent && (
-            <span className="text-xs text-gray-500">Thanks for the feedback!</span>
-          )}
+          {feedbackSent && <span className="text-[11px] text-slate-600">Thanks!</span>}
         </div>
       )}
+    </div>
+  );
+}
+
+function EmptyState({ onExample }: { onExample: (p: string) => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-full py-24 text-center">
+      <div className="w-14 h-14 rounded-2xl bg-violet-600/15 border border-violet-500/20 flex items-center justify-center mb-5">
+        <span className="text-2xl">⚡</span>
+      </div>
+      <h2 className="text-lg font-semibold text-slate-200 mb-2">What can I help with?</h2>
+      <p className="text-sm text-slate-600 max-w-sm mb-8 leading-relaxed">
+        I can research the web, write and execute code, analyse data, or produce long-form content — streaming every agent step live.
+      </p>
+      <div className="grid grid-cols-2 gap-2 max-w-sm w-full">
+        {EXAMPLES.map(p => (
+          <button key={p} onClick={() => onExample(p)}
+            className="text-xs text-slate-500 hover:text-slate-200 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.07] hover:border-violet-500/30 rounded-xl px-4 py-3 text-left transition-all leading-relaxed">
+            {p}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

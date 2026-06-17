@@ -10,11 +10,9 @@ export function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Login fields
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
 
-  // Register fields
   const [regUsername, setRegUsername] = useState("");
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
@@ -22,16 +20,13 @@ export function AuthPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    setError(""); setLoading(true);
     try {
       const res = await api.login(loginEmail, loginPassword);
       login(res.access_token, res.username);
     } catch (err) {
       setError(err instanceof Error ? extractMessage(err.message) : "Login failed");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -44,53 +39,49 @@ export function AuthPage() {
       login(res.access_token, res.username);
     } catch (err) {
       setError(err instanceof Error ? extractMessage(err.message) : "Registration failed");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const handleDemo = async () => {
-    setError("");
-    setLoading(true);
+    setError(""); setLoading(true);
     try {
       const res = await api.demoLogin();
       login(res.access_token, res.username);
     } catch (err) {
       setError(err instanceof Error ? extractMessage(err.message) : "Demo login failed");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
-      {/* Background glow */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-purple-900/20 rounded-full blur-3xl" />
-      </div>
+  const inputCls = "w-full bg-white/[0.04] border border-white/[0.09] rounded-lg px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-violet-500/60 focus:bg-white/[0.06] focus:ring-1 focus:ring-violet-500/20 transition-all";
 
-      <div className="relative w-full max-w-md">
-        {/* Logo */}
+  return (
+    <div className="min-h-screen bg-[#07070e] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Ambient glows */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-violet-950/30 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-[400px] h-[300px] bg-indigo-950/20 rounded-full blur-[100px] pointer-events-none" />
+
+      <div className="relative w-full max-w-[400px]">
+        {/* Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-3">
-            <span className="text-4xl">⚡</span>
-            <h1 className="text-4xl font-bold text-white">Synapse</h1>
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-violet-600 shadow-xl shadow-violet-900/50 mb-4">
+            <span className="text-xl font-bold text-white">S</span>
           </div>
-          <p className="text-gray-400 text-sm">Autonomous multi-agent AI platform</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Synapse</h1>
+          <p className="text-slate-500 text-sm mt-1.5">Autonomous multi-agent AI platform</p>
         </div>
 
         {/* Card */}
-        <div className="bg-gray-900/80 backdrop-blur border border-gray-800 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="bg-[#0f0f1e] border border-white/[0.07] rounded-2xl shadow-2xl overflow-hidden">
           {/* Tabs */}
-          <div className="flex border-b border-gray-800">
+          <div className="flex border-b border-white/[0.06]">
             {(["login", "register"] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => { setTab(t); setError(""); }}
-                className={`flex-1 py-4 text-sm font-medium capitalize transition-colors ${
+                className={`flex-1 py-3.5 text-xs font-semibold uppercase tracking-wider transition-all ${
                   tab === t
-                    ? "text-purple-400 border-b-2 border-purple-500 bg-gray-900"
-                    : "text-gray-500 hover:text-gray-300"
+                    ? "text-violet-400 bg-violet-500/[0.07] border-b-2 border-violet-500"
+                    : "text-slate-600 hover:text-slate-400"
                 }`}
               >
                 {t}
@@ -100,122 +91,87 @@ export function AuthPage() {
 
           <div className="p-6">
             {tab === "login" ? (
-              <form onSubmit={handleLogin} className="space-y-4">
+              <form onSubmit={handleLogin} className="space-y-3.5">
                 <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">Email</label>
-                  <input
-                    type="email"
-                    required
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/30 transition"
-                    placeholder="you@example.com"
-                  />
+                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Email</label>
+                  <input type="email" required value={loginEmail} onChange={e => setLoginEmail(e.target.value)}
+                    className={inputCls} placeholder="you@example.com" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/30 transition"
-                    placeholder="••••••••"
-                  />
+                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Password</label>
+                  <input type="password" required value={loginPassword} onChange={e => setLoginPassword(e.target.value)}
+                    className={inputCls} placeholder="••••••••" />
                 </div>
-                {error && <p className="text-red-400 text-xs">{error}</p>}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg py-3 text-sm font-semibold transition-colors"
-                >
-                  {loading ? "Signing in..." : "Sign In"}
+                {error && (
+                  <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                    <span className="text-red-400 text-xs">{error}</span>
+                  </div>
+                )}
+                <button type="submit" disabled={loading}
+                  className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg py-2.5 text-sm font-semibold transition-colors mt-1 shadow-lg shadow-violet-900/30">
+                  {loading ? <span className="flex items-center justify-center gap-2"><Spinner />Signing in…</span> : "Sign In"}
                 </button>
               </form>
             ) : (
-              <form onSubmit={handleRegister} className="space-y-4">
+              <form onSubmit={handleRegister} className="space-y-3.5">
                 <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">Username</label>
-                  <input
-                    type="text"
-                    required
-                    value={regUsername}
-                    onChange={(e) => setRegUsername(e.target.value)}
-                    className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/30 transition"
-                    placeholder="your_username"
-                  />
+                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Username</label>
+                  <input type="text" required value={regUsername} onChange={e => setRegUsername(e.target.value)}
+                    className={inputCls} placeholder="your_username" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">Email</label>
-                  <input
-                    type="email"
-                    required
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
-                    className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/30 transition"
-                    placeholder="you@example.com"
-                  />
+                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Email</label>
+                  <input type="email" required value={regEmail} onChange={e => setRegEmail(e.target.value)}
+                    className={inputCls} placeholder="you@example.com" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">Password</label>
-                    <input
-                      type="password"
-                      required
-                      value={regPassword}
-                      onChange={(e) => setRegPassword(e.target.value)}
-                      className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/30 transition"
-                      placeholder="••••••••"
-                    />
+                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Password</label>
+                    <input type="password" required value={regPassword} onChange={e => setRegPassword(e.target.value)}
+                      className={inputCls} placeholder="••••••••" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">Confirm</label>
-                    <input
-                      type="password"
-                      required
-                      value={regConfirm}
-                      onChange={(e) => setRegConfirm(e.target.value)}
-                      className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/30 transition"
-                      placeholder="••••••••"
-                    />
+                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Confirm</label>
+                    <input type="password" required value={regConfirm} onChange={e => setRegConfirm(e.target.value)}
+                      className={inputCls} placeholder="••••••••" />
                   </div>
                 </div>
-                {error && <p className="text-red-400 text-xs">{error}</p>}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg py-3 text-sm font-semibold transition-colors"
-                >
-                  {loading ? "Creating account..." : "Create Account"}
+                {error && (
+                  <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                    <span className="text-red-400 text-xs">{error}</span>
+                  </div>
+                )}
+                <button type="submit" disabled={loading}
+                  className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg py-2.5 text-sm font-semibold transition-colors mt-1 shadow-lg shadow-violet-900/30">
+                  {loading ? <span className="flex items-center justify-center gap-2"><Spinner />Creating account…</span> : "Create Account"}
                 </button>
               </form>
             )}
 
-            {/* Divider */}
             <div className="flex items-center gap-3 my-5">
-              <div className="flex-1 h-px bg-gray-800" />
-              <span className="text-xs text-gray-600">or</span>
-              <div className="flex-1 h-px bg-gray-800" />
+              <div className="flex-1 h-px bg-white/[0.06]" />
+              <span className="text-[11px] text-slate-600 font-medium">or continue with</span>
+              <div className="flex-1 h-px bg-white/[0.06]" />
             </div>
 
-            {/* Demo button */}
-            <button
-              onClick={handleDemo}
-              disabled={loading}
-              className="w-full bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-300 hover:text-white border border-gray-700 rounded-lg py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2"
-            >
-              <span>⚡</span>
+            <button onClick={handleDemo} disabled={loading}
+              className="w-full bg-white/[0.04] hover:bg-white/[0.07] disabled:opacity-40 border border-white/[0.08] hover:border-white/[0.12] text-slate-300 hover:text-white rounded-lg py-2.5 text-sm font-medium transition-all flex items-center justify-center gap-2">
+              {loading ? <Spinner /> : <span className="text-violet-400 font-bold">⚡</span>}
               Try Demo — no signup needed
             </button>
           </div>
         </div>
 
-        <p className="text-center text-xs text-gray-600 mt-6">
-          Built with LangGraph · Groq · pgvector · FastAPI · React
+        <p className="text-center text-[11px] text-slate-700 mt-6 tracking-wide">
+          LangGraph · Groq · pgvector · FastAPI · React
         </p>
       </div>
     </div>
   );
+}
+
+function Spinner() {
+  return <span className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin inline-block" />;
 }
 
 function extractMessage(raw: string): string {
@@ -224,7 +180,5 @@ function extractMessage(raw: string): string {
     if (!match) return raw;
     const parsed = JSON.parse(match[1]);
     return parsed.detail || raw;
-  } catch {
-    return raw;
-  }
+  } catch { return raw; }
 }

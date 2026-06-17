@@ -99,10 +99,32 @@ def run_agent_task(self, task_id: str, user_input: str, user_id: str):
 
         # thread_id ties this run to its LangGraph checkpoint
         config = {"configurable": {"thread_id": task_id}}
-        result_state = agent_graph.invoke(initial_state, config=config)
+
+        # Use stream() instead of invoke() so we can publish each span as it completes
+        import redis as sync_redis, json as _json
+        _redis_sync = sync_redis.from_url(settings.redis_url, decode_responses=True)
+
+        result_state = None
+        for chunk in agent_graph.stream(initial_state, config=config):
+            for node_name, node_output in chunk.items():
+                if not isinstance(node_output, dict):
+                    continue
+                span = {
+                    "agent_name": node_name,
+                    "tokens_used": node_output.get("tokens_used", 0),
+                    "latency_ms": 0,
+                }
+                _redis_sync.publish(f"spans:{task_id}", _json.dumps(span))
+            result_state = chunk  # last chunk has final merged state
+
+        # After streaming, get the full final state via invoke for the merged result
+        result_state = agent_graph.get_state(config).values
 
         final_answer = result_state.get("final_answer") or "No answer produced."
         token_cost = result_state.get("tokens_used", 0)
+
+        # Publish FINISH sentinel so WebSocket client knows it's done
+        _redis_sync.publish(f"spans:{task_id}", _json.dumps({"agent_name": "FINISH", "tokens_used": 0, "latency_ms": 0}))
 
         _update_task_status(
             task_id,

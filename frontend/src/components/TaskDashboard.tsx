@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { api, type Task } from "../api/client";
 import { TraceViewer } from "./TraceViewer";
 
@@ -156,9 +159,31 @@ function TaskCard({
       {/* Expanded answer */}
       {expanded && task.result?.answer && (
         <div className="px-4 pb-4 border-t border-gray-800">
-          <p className="text-sm text-gray-300 mt-3 whitespace-pre-wrap leading-relaxed">
-            {task.result.answer}
-          </p>
+          <div className="text-sm text-gray-300 mt-3 leading-relaxed prose prose-invert max-w-none">
+            <ReactMarkdown
+              components={{
+                code({ className, children, ...props }) {
+                  const match = /language-(\w+)/.exec(className || "");
+                  const isBlock = match || String(children).includes("\n");
+                  return isBlock ? (
+                    <SyntaxHighlighter
+                      style={oneDark}
+                      language={match ? match[1] : "python"}
+                      PreTag="div"
+                    >
+                      {String(children).replace(/\n$/, "")}
+                    </SyntaxHighlighter>
+                  ) : (
+                    <code className="bg-gray-800 px-1 py-0.5 rounded text-purple-300 text-xs" {...props}>
+                      {children}
+                    </code>
+                  );
+                },
+              }}
+            >
+              {task.result.answer}
+            </ReactMarkdown>
+          </div>
           {task.status === "done" && (
             <div className="flex gap-2 mt-3">
               <button

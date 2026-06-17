@@ -56,3 +56,11 @@ frontend/.next/
 *.pem
 *.key
 *.cert
+
+# Local DB files
+*.db
+*.sqlite3
+
+# Project writeup docs
+*.docx
+*.pdf

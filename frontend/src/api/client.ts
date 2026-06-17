@@ -1,5 +1,3 @@
-// Typed API client — all calls go through here
-
 export interface Task {
   id: string;
   status: "pending" | "running" | "done" | "failed";
@@ -16,7 +14,13 @@ export interface Span {
   output?: object;
 }
 
-const BASE = "";  // proxied by Vite to localhost:8000
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  username: string;
+}
+
+const BASE = "";
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem("synapse_token");
@@ -37,6 +41,21 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export const api = {
   health: () => request<{ status: string }>("/health"),
+
+  register: (username: string, email: string, password: string) =>
+    request<AuthResponse>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ username, email, password }),
+    }),
+
+  login: (email: string, password: string) =>
+    request<AuthResponse>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+
+  demoLogin: () =>
+    request<AuthResponse>("/auth/demo", { method: "POST" }),
 
   createTask: (input: string, token_budget = 50000) =>
     request<Task>("/tasks/", {

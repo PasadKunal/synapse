@@ -2,98 +2,139 @@ import { useEffect, useRef, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { openSpanSocket, type Span } from "../api/client";
 
-const AGENT_STYLES: Record<string, { label: string; color: string; bg: string; dot: string }> = {
-  supervisor: { label: "Supervisor", color: "text-violet-300", bg: "bg-violet-500/10 border-violet-500/20", dot: "bg-violet-500" },
-  researcher:  { label: "Researcher", color: "text-sky-300",    bg: "bg-sky-500/10 border-sky-500/20",       dot: "bg-sky-400" },
-  coder:       { label: "Coder",      color: "text-amber-300",  bg: "bg-amber-500/10 border-amber-500/20",   dot: "bg-amber-400" },
-  analyst:     { label: "Analyst",    color: "text-orange-300", bg: "bg-orange-500/10 border-orange-500/20", dot: "bg-orange-400" },
-  writer:      { label: "Writer",     color: "text-emerald-300",bg: "bg-emerald-500/10 border-emerald-500/20",dot: "bg-emerald-400" },
-  FINISH:      { label: "Done",       color: "text-slate-400",  bg: "bg-white/[0.04] border-white/10",       dot: "bg-slate-500" },
+const AGENTS: Record<string, { label: string; color: string; dot: string; bg: string }> = {
+  supervisor: { label: "Supervisor", color: "#a78bfa", dot: "#7c6af5", bg: "rgba(124,106,245,0.1)" },
+  researcher:  { label: "Researcher", color: "#7dd3fc", dot: "#38bdf8", bg: "rgba(56,189,248,0.1)" },
+  coder:       { label: "Coder",      color: "#fcd34d", dot: "#fbbf24", bg: "rgba(251,191,36,0.1)" },
+  analyst:     { label: "Analyst",    color: "#fdba74", dot: "#f97316", bg: "rgba(249,115,22,0.1)" },
+  writer:      { label: "Writer",     color: "#6ee7b7", dot: "#34d399", bg: "rgba(52,211,153,0.1)" },
+  FINISH:      { label: "Done",       color: "#6b7280", dot: "#4b5563", bg: "rgba(75,85,99,0.1)" },
 };
 
-const DEFAULT_STYLE = { label: "Agent", color: "text-slate-400", bg: "bg-white/[0.04] border-white/10", dot: "bg-slate-500" };
+const DEFAULT_AGENT = { label: "Agent", color: "#94a3b8", dot: "#64748b", bg: "rgba(100,116,139,0.1)" };
 
-export function TraceViewer({ taskId, onClose }: { taskId: string; onClose: () => void }) {
-  const [spans, setSpans] = useState<Span[]>([]);
+export function TraceViewer({
+  taskId, onClose, preloadedSpans, onSpan,
+}: {
+  taskId: string;
+  onClose: () => void;
+  preloadedSpans?: Span[];   // replay mode — no WebSocket opened
+  onSpan?: (span: Span) => void; // bubble spans up for storage
+}) {
+  const [spans, setSpans] = useState<Span[]>(preloadedSpans ?? []);
   const [connected, setConnected] = useState(false);
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState(!!preloadedSpans);
   const wsRef = useRef<WebSocket | null>(null);
+  const autoCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    // Replay mode: spans already known, nothing to stream
+    if (preloadedSpans) return;
+
     setSpans([]); setDone(false); setConnected(false);
     const ws = openSpanSocket(
       taskId,
-      (span) => { setSpans(prev => [...prev, span]); if (span.agent_name === "FINISH") setDone(true); },
-      () => { setConnected(false); setDone(true); }
+      (span) => {
+        setSpans(prev => [...prev, span]);
+        onSpan?.(span);
+        if (span.agent_name === "FINISH") {
+          setDone(true);
+          autoCloseRef.current = setTimeout(onClose, 2000);
+        }
+      },
+      () => { setConnected(false); setDone(true); },
     );
     ws.onopen = () => setConnected(true);
     wsRef.current = ws;
-    return () => ws.close();
+    return () => { ws.close(); if (autoCloseRef.current) clearTimeout(autoCloseRef.current); };
   }, [taskId]);
 
   const totalTokens = spans.reduce((s, sp) => s + (sp.tokens_used || 0), 0);
-  const chartData = spans.filter(s => s.tokens_used > 0).map(s => ({
-    name: AGENT_STYLES[s.agent_name]?.label ?? s.agent_name,
-    tokens: s.tokens_used,
-  }));
+  // Aggregate tokens per agent label so duplicate spans don't create duplicate bars
+  const chartData = Object.values(
+    spans.filter(s => s.tokens_used > 0).reduce<Record<string, { name: string; tokens: number }>>((acc, s) => {
+      const name = (AGENTS[s.agent_name] ?? DEFAULT_AGENT).label;
+      acc[name] = { name, tokens: (acc[name]?.tokens ?? 0) + s.tokens_used };
+      return acc;
+    }, {})
+  );
 
-  const statusConfig = done
-    ? { label: "Completed", cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" }
+  const status = done
+    ? { label: "Completed", color: "#34d399", bg: "rgba(52,211,153,0.08)", border: "rgba(52,211,153,0.2)" }
     : connected
-    ? { label: "Live", cls: "text-sky-400 bg-sky-500/10 border-sky-500/20 animate-pulse" }
-    : { label: "Connecting", cls: "text-slate-500 bg-white/[0.04] border-white/10" };
+    ? { label: "Live", color: "#60a5fa", bg: "rgba(96,165,250,0.08)", border: "rgba(96,165,250,0.2)" }
+    : { label: "Connecting", color: "#6b7280", bg: "rgba(107,114,128,0.08)", border: "rgba(107,114,128,0.2)" };
 
   return (
-    <div className="bg-[#0e0e1c] border border-white/[0.07] rounded-2xl overflow-hidden">
+    <div style={{ background: "#0e0e1c", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, overflow: "hidden" }}>
       {/* Header */}
-      <div className="px-5 py-3.5 border-b border-white/[0.05] flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h2 className="text-sm font-semibold text-slate-200">Live Trace</h2>
-          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${statusConfig.cls}`}>
-            {statusConfig.label}
+      <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: done ? "#28c840" : connected ? "#febc2e" : "#4a4a62", display: "inline-block",
+              boxShadow: !done && connected ? "0 0 6px #febc2e" : "none", transition: "all 0.3s" }} />
+          </div>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#c8c8de" }}>{preloadedSpans ? "Agent Trace" : "Live Trace"}</span>
+          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", padding: "2px 8px", borderRadius: 999,
+            color: status.color, background: status.bg, border: `1px solid ${status.border}`,
+            animation: !done && connected ? "pulse 2s infinite" : "none" }}>
+            {status.label}
           </span>
         </div>
-        <div className="flex items-center gap-4">
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           {totalTokens > 0 && (
-            <span className="text-xs text-slate-600 font-mono">{totalTokens.toLocaleString()} tokens</span>
+            <span style={{ fontSize: 11, fontFamily: "monospace", color: "#3e3e58" }}>
+              {totalTokens.toLocaleString()} tokens
+            </span>
           )}
-          <button onClick={onClose} className="w-6 h-6 rounded-lg hover:bg-white/[0.06] flex items-center justify-center text-slate-600 hover:text-slate-300 transition-all text-base leading-none">×</button>
+          <button onClick={onClose}
+            style={{ width: 24, height: 24, borderRadius: 8, background: "transparent", border: "none", cursor: "pointer", color: "#4a4a62", fontSize: 18, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "#c8c8de"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#4a4a62"; }}>
+            ×
+          </button>
         </div>
       </div>
 
-      <div className="px-5 py-4 space-y-4">
-        {/* Spans timeline */}
+      <div style={{ padding: "16px 20px" }}>
+        {/* Spans */}
         {spans.length === 0 ? (
-          <div className="flex items-center gap-3 py-2">
-            <div className="w-3 h-3 rounded-full bg-slate-700 animate-pulse" />
-            <p className="text-xs text-slate-600 italic">Waiting for agent spans…</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2a2a42", animation: preloadedSpans ? "none" : "pulse 1.5s infinite" }} />
+            <span style={{ fontSize: 12, color: "#3e3e58", fontStyle: "italic" }}>
+              {preloadedSpans ? "No trace data recorded for this task." : "Waiting for agent activity…"}
+            </span>
           </div>
         ) : (
-          <div className="space-y-1.5">
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {spans.map((span, i) => {
-              const style = AGENT_STYLES[span.agent_name] ?? DEFAULT_STYLE;
+              const ag = AGENTS[span.agent_name] ?? DEFAULT_AGENT;
               const isLast = i === spans.length - 1;
               return (
-                <div key={i} className="flex items-center gap-3">
-                  {/* Timeline connector */}
-                  <div className="flex flex-col items-center w-5 flex-shrink-0">
-                    <div className={`w-2 h-2 rounded-full ${style.dot}`} />
-                    {!isLast && <div className="w-px h-4 bg-white/[0.06] mt-0.5" />}
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {/* Timeline */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 16, flexShrink: 0 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: ag.dot, display: "inline-block", flexShrink: 0 }} />
+                    {!isLast && <div style={{ width: 1, height: 14, background: "rgba(255,255,255,0.05)", marginTop: 2 }} />}
                   </div>
-
-                  <div className="flex items-center gap-2.5 flex-1">
-                    <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${style.color} ${style.bg}`}>
-                      {style.label}
+                  {/* Badge + meta */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 6,
+                      color: ag.color, background: ag.bg, border: `1px solid ${ag.dot}30`, whiteSpace: "nowrap" }}>
+                      {ag.label}
                     </span>
                     {span.tokens_used > 0 && (
-                      <span className="text-[11px] text-slate-600 font-mono">{span.tokens_used.toLocaleString()} tok</span>
+                      <span style={{ fontSize: 11, fontFamily: "monospace", color: "#3e3e5a" }}>
+                        {span.tokens_used.toLocaleString()} tok
+                      </span>
                     )}
                     {span.latency_ms > 0 && (
-                      <span className="text-[11px] text-slate-700 font-mono">{span.latency_ms}ms</span>
+                      <span style={{ fontSize: 11, fontFamily: "monospace", color: "#2e2e4a" }}>
+                        {span.latency_ms}ms
+                      </span>
                     )}
                   </div>
-
-                  <span className="text-[10px] text-slate-700 font-mono w-5 text-right">{i + 1}</span>
+                  <span style={{ fontSize: 10, fontFamily: "monospace", color: "#2e2e44", width: 18, textAlign: "right", flexShrink: 0 }}>{i + 1}</span>
                 </div>
               );
             })}
@@ -102,18 +143,20 @@ export function TraceViewer({ taskId, onClose }: { taskId: string; onClose: () =
 
         {/* Chart */}
         {chartData.length > 1 && (
-          <div className="border-t border-white/[0.05] pt-4">
-            <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest mb-3">Tokens per agent</p>
-            <ResponsiveContainer width="100%" height={120}>
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", marginTop: 16, paddingTop: 16 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "#2e2e44", textTransform: "uppercase", marginBottom: 12 }}>
+              Token usage per agent
+            </p>
+            <ResponsiveContainer width="100%" height={110}>
               <BarChart data={chartData} margin={{ top: 0, right: 0, left: -24, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                <XAxis dataKey="name" tick={{ fill: "#475569", fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#475569", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="name" tick={{ fill: "#3e3e58", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#3e3e58", fontSize: 10 }} axisLine={false} tickLine={false} />
                 <Tooltip
                   contentStyle={{ background: "#0e0e1c", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, fontSize: 12 }}
-                  labelStyle={{ color: "#e2e8f0", fontWeight: 600 }}
+                  labelStyle={{ color: "#e2e2f0", fontWeight: 600 }}
                   itemStyle={{ color: "#a78bfa" }}
-                  cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                  cursor={{ fill: "rgba(255,255,255,0.02)" }}
                 />
                 <Bar dataKey="tokens" fill="#7c3aed" radius={[4, 4, 0, 0]} />
               </BarChart>

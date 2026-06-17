@@ -66,14 +66,25 @@ def _parse_decision(text: str) -> dict:
     raise ValueError(f"Could not parse supervisor decision: {text[:200]}")
 
 
+MAX_HISTORY_MSGS = 6  # keep last N messages to stay under free-tier TPM limits
+
 def supervisor_node(state: AgentState) -> dict:
     log.info("supervisor", task_id=state["task_id"], loop=state["loop_count"])
+
+    # Hard stop: prevent runaway loops that burn the free-tier quota
+    if state["loop_count"] >= 8:
+        return {
+            "next_agent": "FINISH",
+            "final_answer": "Reached the maximum number of agent steps. Here is what was gathered so far.",
+            "tokens_used": 0,
+        }
 
     # System prompt must be first so Groq follows JSON-only instructions
     memory_block = build_context_block(state.get("memory_context", []))
     messages = [{"role": "system", "content": SYSTEM_PROMPT + memory_block}]
     messages.append({"role": "user", "content": state["input"]})
-    messages.extend(state.get("messages", []))
+    # Only send the most recent messages to stay within free-tier TPM limits
+    messages.extend(state.get("messages", [])[-MAX_HISTORY_MSGS:])
 
     response_text, tokens = call_groq(
         messages=messages,

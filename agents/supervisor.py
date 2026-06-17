@@ -42,16 +42,27 @@ To finish (use markdown in the answer — wrap code in ```language blocks, use h
 
 def _parse_decision(text: str) -> dict:
     """Extract JSON from the model response even if wrapped in markdown."""
-    # Strip ```json ... ``` fences if present
-    text = re.sub(r"```(?:json)?\s*", "", text).strip().rstrip("`").strip()
+    stripped = text.strip()
+    # 1. Try direct parse first (model returned clean JSON)
     try:
-        return json.loads(text)
+        return json.loads(stripped)
     except json.JSONDecodeError:
-        # Last resort: look for the first {...} block
-        match = re.search(r"\{.*\}", text, re.DOTALL)
-        if match:
-            return json.loads(match.group())
-        raise ValueError(f"Could not parse supervisor decision: {text[:200]}")
+        pass
+    # 2. Strip only the single outermost ```json...``` or ```...``` fence
+    outer = re.match(r"^```(?:json)?\s*\n?([\s\S]*?)\n?```\s*$", stripped)
+    if outer:
+        try:
+            return json.loads(outer.group(1).strip())
+        except json.JSONDecodeError:
+            pass
+    # 3. Last resort: grab the first outermost {...} block (handles leading prose)
+    brace = re.search(r"\{[\s\S]*\}", stripped)
+    if brace:
+        try:
+            return json.loads(brace.group())
+        except json.JSONDecodeError:
+            pass
+    raise ValueError(f"Could not parse supervisor decision: {text[:200]}")
 
 
 def supervisor_node(state: AgentState) -> dict:

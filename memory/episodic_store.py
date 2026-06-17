@@ -14,7 +14,6 @@ import structlog
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.config import settings
 from api.models import EpisodicMemory
 from memory.embeddings import embed
 
@@ -127,33 +126,3 @@ def _mmr_select(
     return [contents[i] for i in selected_indices]
 
 
-async def check_semantic_cache(
-    session: AsyncSession,
-    user_id: str,
-    query: str,
-) -> str | None:
-    """
-    If a nearly identical query (cosine similarity > threshold) was answered
-    before, return the cached answer — skip running the agent entirely.
-    """
-    threshold = settings.dedup_similarity_threshold
-    query_vec = embed(query)
-
-    row = await session.execute(
-        text("""
-            SELECT t.result
-            FROM episodic_memory e
-            JOIN tasks t ON e.task_id = t.id
-            WHERE e.user_id = :uid
-              AND t.status = 'done'
-              AND 1 - (e.embedding <=> CAST(:qv AS vector)) > :threshold
-            ORDER BY e.embedding <=> CAST(:qv AS vector)
-            LIMIT 1
-        """),
-        {"qv": str(query_vec), "uid": str(user_id), "threshold": threshold},
-    )
-    result = row.fetchone()
-    if result and result.result:
-        log.info("cache_hit", user_id=user_id, threshold=threshold)
-        return result.result.get("answer")
-    return None

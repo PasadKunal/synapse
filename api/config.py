@@ -19,8 +19,6 @@ class Settings(BaseSettings):
     google_redirect_uri: str = "http://localhost:8000/auth/google/callback"
 
     # LLM
-    anthropic_api_key: str = ""
-    openai_api_key: str = ""
     groq_api_key: str = ""
 
     # Observability

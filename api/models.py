@@ -97,13 +97,3 @@ class DPOPair(Base):
     task: Mapped["Task"] = relationship("Task", back_populates="dpo_pairs")
 
 
-class AuditLog(Base):
-    """Immutable record of every user action for compliance and debugging."""
-
-    __tablename__ = "audit_log"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
-    action: Mapped[str] = mapped_column(String(100), nullable=False)
-    extra: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

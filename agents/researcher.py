@@ -55,7 +55,6 @@ def researcher_node(state: AgentState) -> dict:
         model=SPECIALIST_MODEL,
         temperature=0.3,
         max_tokens=1024,
-        tools=None,
     )
 
     log.info("researcher_done", task_id=state["task_id"], tokens=tokens)

@@ -69,7 +69,7 @@ export function TaskDashboard() {
   };
 
   const selectedTask = tasks.find(t => t.id === selectedTaskId) ?? null;
-  const showEmpty = !selectedTask && !activeTaskId;
+  const showEmpty = !selectedTask && !activeTaskId && !submitting;
 
   return (
     <div style={{ display: "flex", height: "calc(100vh - 60px)", overflow: "hidden" }}>
@@ -113,6 +113,7 @@ export function TaskDashboard() {
             <SidebarItem key={task.id} task={task} selected={task.id === selectedTaskId}
               onClick={() => {
                 setSelectedTaskId(task.id);
+                setShowTrace(false);
                 if (task.status === "running" || task.status === "pending") setActiveTaskId(task.id);
                 else setActiveTaskId(null);
               }} />
@@ -170,13 +171,12 @@ export function TaskDashboard() {
             <div style={{ maxWidth: 820, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
               {showTrace && selectedTask && (
                 <TraceViewer
+                  key={selectedTask.id}
                   taskId={selectedTask.id}
                   onClose={() => { setActiveTaskId(null); setShowTrace(false); }}
                   preloadedSpans={
-                    // Live task → no preload (stream via WebSocket)
                     activeTaskId === selectedTask.id
                       ? undefined
-                      // Completed task → replay stored spans (may be empty for old tasks)
                       : taskSpans[selectedTask.id] ?? []
                   }
                   onSpan={span => setTaskSpans(prev => ({
@@ -185,13 +185,15 @@ export function TaskDashboard() {
                   }))}
                 />
               )}
-              {selectedTask && (
+              {selectedTask ? (
                 <TaskAnswer
                   task={selectedTask}
                   showTrace={showTrace}
                   onToggleTrace={() => setShowTrace(v => !v)}
                 />
-              )}
+              ) : submitting ? (
+                <CreatingTaskCard input={input} />
+              ) : null}
             </div>
           )}
         </div>
@@ -334,6 +336,25 @@ function TaskAnswer({ task, showTrace, onToggleTrace }: { task: Task; showTrace:
           {feedback && <span style={{ fontSize: 12, color: "#3a3a58" }}>Thanks!</span>}
         </div>
       )}
+    </div>
+  );
+}
+
+function CreatingTaskCard({ input }: { input: string }) {
+  return (
+    <div style={{ borderRadius: 16, overflow: "hidden", background: "#0e0e1c", border: "1px solid rgba(255,255,255,0.07)" }}>
+      <div style={{ padding: "16px 24px", display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#60a5fa", boxShadow: "0 0 8px #60a5fa", flexShrink: 0 }} />
+        <p style={{ fontSize: 14, fontWeight: 600, color: "#d4d4ec", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {input}
+        </p>
+        <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", padding: "3px 9px", borderRadius: 20, color: "#60a5fa", background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.2)", flexShrink: 0 }}>
+          CREATING
+        </span>
+      </div>
+      <div style={{ padding: "28px 28px 20px" }}>
+        <RunningPlaceholder />
+      </div>
     </div>
   );
 }

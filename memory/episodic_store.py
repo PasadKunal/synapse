@@ -18,6 +18,10 @@ from memory.embeddings import embed
 
 log = structlog.get_logger()
 
+# Cache entries live alongside regular episodic memory but use this prefix
+# so retrieve_relevant() can exclude them and check_semantic_cache() can find them.
+_CACHE_PREFIX = "CACHE::"
+
 
 async def store_episode(
     session: AsyncSession,
@@ -62,6 +66,7 @@ async def retrieve_relevant(
                    1 - (embedding <=> CAST(:qv AS vector)) AS similarity
             FROM episodic_memory
             WHERE user_id = :uid
+              AND content NOT LIKE 'CACHE::%'
             ORDER BY embedding <=> CAST(:qv AS vector)
             LIMIT :limit
         """),
@@ -125,3 +130,59 @@ def _mmr_select(
     return [contents[i] for i in selected_indices]
 
 
+async def check_semantic_cache(
+    session: AsyncSession,
+    user_id: str,
+    query: str,
+    threshold: float = 0.92,
+) -> str | None:
+    """
+    Look for a previously answered near-identical query.
+    The embedding is stored against the original query text, so cosine
+    similarity works correctly even though the content holds the answer.
+    Returns the cached answer string, or None if no match above threshold.
+    """
+    query_vec = embed(query)
+
+    rows = await session.execute(
+        text("""
+            SELECT content,
+                   1 - (embedding <=> CAST(:qv AS vector)) AS similarity
+            FROM episodic_memory
+            WHERE user_id = :uid
+              AND content LIKE 'CACHE::%'
+            ORDER BY embedding <=> CAST(:qv AS vector)
+            LIMIT 1
+        """),
+        {"qv": str(query_vec), "uid": str(user_id)},
+    )
+    row = rows.fetchone()
+
+    if row and float(row.similarity) >= threshold:
+        log.info("semantic_cache_hit", user_id=user_id, similarity=round(float(row.similarity), 3))
+        return row.content[len(_CACHE_PREFIX):]
+
+    return None
+
+
+async def store_cache_entry(
+    session: AsyncSession,
+    user_id: str,
+    query: str,
+    answer: str,
+    task_id: str | None = None,
+) -> None:
+    """
+    Store a query-answer pair so future near-identical queries can skip the agents.
+    The embedding is of the QUERY (not the answer) so similarity checks work correctly.
+    """
+    vector = embed(query)
+    episode = EpisodicMemory(
+        user_id=uuid.UUID(user_id),
+        task_id=uuid.UUID(task_id) if task_id else None,
+        content=f"{_CACHE_PREFIX}{answer}",
+        embedding=vector,
+    )
+    session.add(episode)
+    await session.commit()
+    log.info("cache_entry_stored", user_id=user_id)

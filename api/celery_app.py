@@ -78,6 +78,36 @@ def run_agent_task(self, task_id: str, user_input: str, user_id: str):
     _update_task_status(task_id, "running")
 
     try:
+        import asyncio as _asyncio
+        import redis as sync_redis, json as _json
+        _redis_sync = sync_redis.from_url(settings.redis_url, decode_responses=True)
+
+        # Check semantic cache and retrieve relevant memories before running agents
+        cached_answer = None
+        memory_context: list[str] = []
+        try:
+            async def _preflight():
+                from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+                from memory.episodic_store import check_semantic_cache, retrieve_relevant
+                engine = create_async_engine(settings.database_url)
+                async with AsyncSession(engine) as s:
+                    hit = await check_semantic_cache(s, user_id, user_input)
+                    memories = [] if hit else await retrieve_relevant(s, user_id, user_input, k=3)
+                await engine.dispose()
+                return hit, memories
+            cached_answer, memory_context = _asyncio.run(_preflight())
+        except Exception as pre_exc:
+            log.warning("preflight_failed", task_id=task_id, error=str(pre_exc))
+
+        if cached_answer:
+            log.info("returning_cached_answer", task_id=task_id)
+            _redis_sync.publish(f"spans:{task_id}", _json.dumps({"agent_name": "FINISH", "tokens_used": 0, "latency_ms": 0}))
+            _update_task_status(task_id, "done", result={"answer": cached_answer}, token_cost=0)
+            return {"answer": cached_answer, "tokens_used": 0}
+
+        if memory_context:
+            log.info("memory_context_loaded", task_id=task_id, chunks=len(memory_context))
+
         from agents.graph import agent_graph
         from agents.state import AgentState
 
@@ -91,15 +121,11 @@ def run_agent_task(self, task_id: str, user_input: str, user_id: str):
             token_budget=settings.default_token_budget,
             tokens_used=0,
             loop_count=0,
-            memory_context=[],
+            memory_context=memory_context,
         )
 
         # thread_id ties this run to its LangGraph checkpoint
         config = {"configurable": {"thread_id": task_id}}
-
-        # Use stream() instead of invoke() so we can publish each span as it completes
-        import redis as sync_redis, json as _json
-        _redis_sync = sync_redis.from_url(settings.redis_url, decode_responses=True)
 
         result_state = None
         for chunk in agent_graph.stream(initial_state, config=config):
@@ -151,24 +177,22 @@ def run_agent_task(self, task_id: str, user_input: str, user_id: str):
             token_cost=token_cost,
         )
 
-        # Store a summary of this conversation in episodic memory
-        # so future tasks by the same user can benefit from it
+        # Store episodic memory summary + semantic cache entry for future tasks
         try:
             from memory.summarizer import summarize_conversation
-            from memory.episodic_store import store_episode
-            import asyncio
+            from memory.episodic_store import store_episode, store_cache_entry
 
             summary = summarize_conversation(result_state.get("messages", []))
-            if summary:
-                session = _get_sync_session()
-                # Run async store in a new event loop (Celery workers are sync)
-                async def _store():
-                    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-                    engine = create_async_engine(settings.database_url)
-                    async with AsyncSession(engine) as s:
+
+            async def _store_memories():
+                from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+                engine = create_async_engine(settings.database_url)
+                async with AsyncSession(engine) as s:
+                    if summary:
                         await store_episode(s, user_id, summary, task_id)
-                    await engine.dispose()
-                asyncio.run(_store())
+                    await store_cache_entry(s, user_id, user_input, final_answer, task_id)
+                await engine.dispose()
+            _asyncio.run(_store_memories())
         except Exception as mem_exc:
             log.warning("memory_store_failed", task_id=task_id, error=str(mem_exc))
 

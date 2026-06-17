@@ -26,6 +26,9 @@ celery_app.conf.update(
     task_track_started=True,
     worker_prefetch_multiplier=1,   # one task per worker at a time (agent tasks are heavy)
     task_routes={"api.celery_app.run_agent_task": {"queue": "agent_tasks"}},
+    # PyTorch/sentence-transformers crash on fork() on macOS (Python 3.14 + OpenMP).
+    # solo pool runs tasks in the main process without forking.
+    worker_pool="solo",
 )
 
 

@@ -22,6 +22,9 @@ export function TraceViewer({ taskId, onClose }: Props) {
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
+    setSpans([]);
+    setDone(false);
+    setConnected(false);
     const ws = openSpanSocket(
       taskId,
       (span) => {

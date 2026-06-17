@@ -8,8 +8,9 @@ log = structlog.get_logger()
 
 SYSTEM_PROMPT = """You are a research specialist. You have been given search results from the web.
 Synthesise them into a clear, factual answer to the sub-task.
-Be concise. Cite which result supports each claim (e.g. [1], [2]).
-Do not make up information not found in the results."""
+- Use markdown: **bold** for key terms, bullet lists for multiple points, headings if needed.
+- Cite which result supports each claim (e.g. [1], [2]).
+- Do not make up information not found in the results."""
 
 
 def _web_search(query: str, max_results: int = 5) -> list[dict]:

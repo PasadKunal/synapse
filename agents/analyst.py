@@ -11,7 +11,8 @@ SYSTEM_PROMPT = """You are a data and reasoning specialist. You:
 - Identify patterns, anomalies, or key insights.
 - Are precise — never guess when you can reason it out.
 
-Format your response clearly with sections if needed."""
+Format your response in markdown: use **bold** for conclusions, numbered steps for calculations,
+tables for comparisons, and code blocks (```python) for any formulas or pseudocode."""
 
 
 def analyst_node(state: AgentState) -> dict:

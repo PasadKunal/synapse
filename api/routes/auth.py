@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
-from passlib.context import CryptContext
+import bcrypt as _bcrypt
 from pydantic import BaseModel, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +14,11 @@ from api.models import User
 
 router = APIRouter(tags=["auth"])
 
-pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+def _hash_pw(password: str) -> str:
+    return _bcrypt.hashpw(password.encode(), _bcrypt.gensalt()).decode()
+
+def _verify_pw(password: str, hashed: str) -> bool:
+    return _bcrypt.checkpw(password.encode(), hashed.encode())
 
 DEMO_USER_EMAIL = "demo@synapse.local"
 DEMO_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000002")
@@ -87,7 +91,7 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     user = User(
         email=body.email,
         username=body.username,
-        password_hash=pwd_ctx.hash(body.password),
+        password_hash=_hash_pw(body.password),
     )
     db.add(user)
     await db.commit()
@@ -102,7 +106,7 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
 
-    if not user or not user.password_hash or not pwd_ctx.verify(body.password, user.password_hash):
+    if not user or not user.password_hash or not _verify_pw(body.password, user.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")
 
     token = create_access_token(str(user.id))

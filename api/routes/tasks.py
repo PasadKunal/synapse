@@ -7,10 +7,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import get_current_user
 from api.database import get_db
-from api.models import Task
+from api.models import AgentSpan, Task
 from api.rate_limiter import rate_limit_dependency
 
 router = APIRouter(tags=["tasks"])
+
+
+class SpanResponse(BaseModel):
+    agent_name: str
+    tokens_used: int
+    latency_ms: int | None
+
+    model_config = {"from_attributes": True}
 
 
 class TaskCreate(BaseModel):
@@ -81,6 +89,26 @@ async def get_task(
         result=task.result,
         token_cost=task.token_cost,
     )
+
+
+@router.get("/{task_id}/spans", response_model=list[SpanResponse])
+async def get_task_spans(
+    task_id: str,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    task_result = await db.execute(
+        select(Task).where(Task.id == uuid.UUID(task_id), Task.user_id == uuid.UUID(user_id))
+    )
+    if not task_result.scalar_one_or_none():
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Task not found")
+
+    spans_result = await db.execute(
+        select(AgentSpan)
+        .where(AgentSpan.task_id == uuid.UUID(task_id))
+        .order_by(AgentSpan.created_at)
+    )
+    return spans_result.scalars().all()
 
 
 @router.get("/", response_model=list[TaskResponse])

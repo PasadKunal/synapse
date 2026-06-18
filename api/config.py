@@ -28,7 +28,7 @@ class Settings(BaseSettings):
 
     # Agent
     default_token_budget: int = 50000
-    max_agent_loops: int = 10
+    max_agent_loops: int = 5
     dedup_similarity_threshold: float = 0.92
 
     # Rate limiting

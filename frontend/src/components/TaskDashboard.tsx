@@ -68,6 +68,17 @@ export function TaskDashboard() {
     } finally { setSubmitting(false); }
   };
 
+  // For completed tasks with no cached spans, fetch from the API so the trace can replay
+  useEffect(() => {
+    if (!selectedTaskId) return;
+    const task = tasks.find(t => t.id === selectedTaskId);
+    if (!task || task.status !== "done") return;
+    if (taskSpans[selectedTaskId]?.length) return;
+    api.getTaskSpans(selectedTaskId).then(spans => {
+      if (spans.length) setTaskSpans(prev => ({ ...prev, [selectedTaskId]: spans }));
+    }).catch(() => {});
+  }, [selectedTaskId]);
+
   const selectedTask = tasks.find(t => t.id === selectedTaskId) ?? null;
   const showEmpty = !selectedTask && !activeTaskId && !submitting;
 

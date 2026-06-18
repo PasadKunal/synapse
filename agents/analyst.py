@@ -1,6 +1,6 @@
 import structlog
 
-from agents.base import SPECIALIST_MODEL, build_context_block, call_groq
+from agents.base import SPECIALIST_MODEL, build_context_block, call_groq, parse_subtask
 from agents.state import AgentState
 
 log = structlog.get_logger()
@@ -17,7 +17,8 @@ tables for comparisons, and code blocks (```python) for any formulas or pseudoco
 
 def analyst_node(state: AgentState) -> dict:
     last_msg = state["messages"][-1]["content"] if state["messages"] else state["input"]
-    log.info("analyst", task_id=state["task_id"], subtask=last_msg[:80])
+    subtask = parse_subtask(last_msg)
+    log.info("analyst", task_id=state["task_id"], subtask=subtask[:80])
 
     # Include the full conversation so the analyst has all prior context
     memory_block = build_context_block(state.get("memory_context", []))
@@ -32,7 +33,7 @@ def analyst_node(state: AgentState) -> dict:
             "content": (
                 f"Task: {state['input']}\n\n"
                 f"Conversation so far:\n{conversation}\n\n"
-                f"Sub-task: {last_msg}"
+                f"Sub-task: {subtask}"
                 f"{memory_block}"
             ),
         },

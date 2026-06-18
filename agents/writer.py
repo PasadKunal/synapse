@@ -1,6 +1,6 @@
 import structlog
 
-from agents.base import SPECIALIST_MODEL, build_context_block, call_groq
+from agents.base import SPECIALIST_MODEL, build_context_block, call_groq, parse_subtask
 from agents.state import AgentState
 
 log = structlog.get_logger()
@@ -16,7 +16,8 @@ Do not repeat instructions back. Just write the content."""
 
 def writer_node(state: AgentState) -> dict:
     last_msg = state["messages"][-1]["content"] if state["messages"] else state["input"]
-    log.info("writer", task_id=state["task_id"], subtask=last_msg[:80])
+    subtask = parse_subtask(last_msg)
+    log.info("writer", task_id=state["task_id"], subtask=subtask[:80])
 
     memory_block = build_context_block(state.get("memory_context", []))
     conversation = "\n\n".join(
@@ -30,7 +31,7 @@ def writer_node(state: AgentState) -> dict:
             "content": (
                 f"Original task: {state['input']}\n\n"
                 f"Research and analysis so far:\n{conversation}\n\n"
-                f"Writing sub-task: {last_msg}"
+                f"Writing sub-task: {subtask}"
                 f"{memory_block}"
             ),
         },

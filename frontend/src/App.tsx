@@ -1,9 +1,14 @@
+import { useState } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { AuthPage } from "./components/AuthPage";
 import { TaskDashboard } from "./components/TaskDashboard";
+import { MemoryExplorer } from "./components/MemoryExplorer";
+
+type View = "tasks" | "memory";
 
 function Shell() {
   const { token, username, logout } = useAuth();
+  const [view, setView] = useState<View>("tasks");
   if (!token) return <AuthPage />;
 
   return (
@@ -32,6 +37,20 @@ function Shell() {
           }}>BETA</span>
         </div>
 
+        {/* Nav */}
+        <nav style={{ display: "flex", gap: 2, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 3 }}>
+          {(["tasks", "memory"] as const).map(v => (
+            <button key={v} onClick={() => setView(v)} style={{
+              padding: "5px 14px", borderRadius: 8, fontSize: 13, fontWeight: 600,
+              cursor: "pointer", border: "none", transition: "all 0.15s",
+              background: view === v ? "rgba(124,106,245,0.2)" : "transparent",
+              color: view === v ? "#a78bfa" : "#4a4a68",
+            }}>
+              {v === "tasks" ? "Tasks" : "Memory"}
+            </button>
+          ))}
+        </nav>
+
         {/* user controls */}
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -56,7 +75,7 @@ function Shell() {
       </header>
 
       <main style={{ flex: 1, overflow: "hidden" }}>
-        <TaskDashboard />
+        {view === "tasks" ? <TaskDashboard /> : <MemoryExplorer />}
       </main>
     </div>
   );

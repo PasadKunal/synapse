@@ -56,6 +56,23 @@ def _update_task_status(task_id: str, status: str, result: dict | None = None, t
         session.close()
 
 
+def _save_span(task_id: str, agent_name: str, tokens_used: int):
+    from api.models import AgentSpan
+
+    session = _get_sync_session()
+    try:
+        session.add(AgentSpan(
+            task_id=uuid.UUID(task_id),
+            agent_name=agent_name,
+            tokens_used=tokens_used,
+        ))
+        session.commit()
+    except Exception:
+        session.rollback()
+    finally:
+        session.close()
+
+
 
 @celery_app.task(
     name="api.celery_app.run_agent_task",
@@ -92,7 +109,7 @@ def run_agent_task(self, task_id: str, user_input: str, user_id: str):
                 engine = create_async_engine(settings.database_url)
                 async with AsyncSession(engine) as s:
                     hit = await check_semantic_cache(s, user_id, user_input)
-                    memories = [] if hit else await retrieve_relevant(s, user_id, user_input, k=3)
+                    memories = [] if hit else await retrieve_relevant(s, user_id, user_input, k=2)
                 await engine.dispose()
                 return hit, memories
             cached_answer, memory_context = _asyncio.run(_preflight())
@@ -132,12 +149,14 @@ def run_agent_task(self, task_id: str, user_input: str, user_id: str):
             for node_name, node_output in chunk.items():
                 if not isinstance(node_output, dict):
                     continue
+                tokens = node_output.get("tokens_used", 0)
                 span = {
                     "agent_name": node_name,
-                    "tokens_used": node_output.get("tokens_used", 0),
+                    "tokens_used": tokens,
                     "latency_ms": 0,
                 }
                 _redis_sync.publish(f"spans:{task_id}", _json.dumps(span))
+                _save_span(task_id, node_name, tokens)
             result_state = chunk  # last chunk has final merged state
 
         # After streaming, get the full final state via invoke for the merged result

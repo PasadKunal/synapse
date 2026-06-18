@@ -1,3 +1,4 @@
+import json
 import time
 
 import structlog
@@ -47,9 +48,26 @@ def call_groq(
     return content, tokens
 
 
+def parse_subtask(msg: str) -> str:
+    """Extract the subtask text from the supervisor's JSON routing decision.
+
+    The supervisor sends {"next": "agent", "subtask": "..."}.
+    Specialists should work on the subtask text, not the raw JSON.
+    Falls back to the original string if it isn't valid JSON.
+    """
+    try:
+        parsed = json.loads(msg)
+        return parsed.get("subtask", msg)
+    except (json.JSONDecodeError, AttributeError, TypeError):
+        return msg
+
+
+_MAX_CHUNK_CHARS = 200  # keep memory snippets short to stay within free-tier TPM limits
+
 def build_context_block(memory_context: list[str]) -> str:
     """Format episodic memories into a system prompt block."""
     if not memory_context:
         return ""
-    chunks = "\n---\n".join(memory_context)
+    snippets = [c[:_MAX_CHUNK_CHARS] + ("…" if len(c) > _MAX_CHUNK_CHARS else "") for c in memory_context]
+    chunks = "\n---\n".join(snippets)
     return f"\n\n## Relevant past context\n{chunks}\n"

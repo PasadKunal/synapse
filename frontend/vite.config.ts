@@ -11,6 +11,7 @@ export default defineConfig({
       "/tasks": "http://localhost:8000",
       "/auth": "http://localhost:8000",
       "/feedback": "http://localhost:8000",
+      "/memory": "http://localhost:8000",
       "/health": "http://localhost:8000",
       "/ws": {
         target: "ws://localhost:8000",

@@ -5,6 +5,7 @@ import structlog
 
 from agents.base import SUPERVISOR_MODEL, build_context_block, call_groq
 from agents.state import AgentState
+from api.config import settings
 
 log = structlog.get_logger()
 
@@ -72,7 +73,7 @@ def supervisor_node(state: AgentState) -> dict:
     log.info("supervisor", task_id=state["task_id"], loop=state["loop_count"])
 
     # Hard stop: prevent runaway loops that burn the free-tier quota
-    if state["loop_count"] >= 8:
+    if state["loop_count"] >= settings.max_agent_loops:
         return {
             "next_agent": "FINISH",
             "final_answer": "Reached the maximum number of agent steps. Here is what was gathered so far.",

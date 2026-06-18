@@ -4,7 +4,7 @@ import textwrap
 
 import structlog
 
-from agents.base import SPECIALIST_MODEL, build_context_block, call_groq
+from agents.base import SPECIALIST_MODEL, build_context_block, call_groq, parse_subtask
 from agents.state import AgentState
 
 log = structlog.get_logger()
@@ -54,12 +54,13 @@ def _run_code(code: str) -> tuple[str, str]:
 
 def coder_node(state: AgentState) -> dict:
     last_msg = state["messages"][-1]["content"] if state["messages"] else state["input"]
-    log.info("coder", task_id=state["task_id"], subtask=last_msg[:80])
+    subtask = parse_subtask(last_msg)
+    log.info("coder", task_id=state["task_id"], subtask=subtask[:80])
 
     memory_block = build_context_block(state.get("memory_context", []))
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": f"{last_msg}{memory_block}"},
+        {"role": "user", "content": f"{subtask}{memory_block}"},
     ]
 
     response_text, tokens = call_groq(

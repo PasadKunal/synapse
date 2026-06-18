@@ -23,6 +23,17 @@ log = structlog.get_logger()
 _CACHE_PREFIX = "CACHE::"
 
 
+def _to_float_array(val) -> np.ndarray:
+    """Convert a pgvector embedding to a numpy float array.
+
+    Raw text() SQL queries return vectors as the string '[0.1,0.2,...]'.
+    ORM queries return them as a Python list. This handles both.
+    """
+    if isinstance(val, str):
+        return np.array([float(x) for x in val.strip("[]").split(",")], dtype=float)
+    return np.array(val, dtype=float)
+
+
 async def store_episode(
     session: AsyncSession,
     user_id: str,
@@ -94,8 +105,8 @@ def _mmr_select(
     At each step, pick the candidate that maximises:
         lambda * relevance_to_query - (1 - lambda) * max_similarity_to_selected
     """
-    q = np.array(query_vec)
-    embeddings = [np.array(row.embedding) for row in candidates]
+    q = np.array(query_vec, dtype=float)
+    embeddings = [_to_float_array(row.embedding) for row in candidates]
     contents = [row.content for row in candidates]
 
     selected_indices: list[int] = []

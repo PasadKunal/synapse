@@ -1,10 +1,32 @@
 import structlog
 from ddgs import DDGS
 
-from agents.base import SPECIALIST_MODEL, build_context_block, call_groq
+from agents.base import SPECIALIST_MODEL, build_context_block, call_groq, parse_subtask
 from agents.state import AgentState
 
 log = structlog.get_logger()
+
+_INJECTION_PATTERNS = [
+    "ignore previous instructions",
+    "ignore all instructions",
+    "forget everything above",
+    "you are now",
+    "your new role is",
+    "pretend you are",
+    "act as if",
+    "new system prompt",
+    "disregard all prior",
+    "override your instructions",
+    "jailbreak",
+    "from now on you",
+    "###new instructions###",
+]
+
+
+def _check_injection(text: str) -> bool:
+    lower = text.lower()
+    return any(pattern in lower for pattern in _INJECTION_PATTERNS)
+
 
 SYSTEM_PROMPT = """You are a research specialist. You have been given search results from the web.
 Synthesise them into a clear, factual answer to the sub-task.
@@ -24,17 +46,21 @@ def _web_search(query: str, max_results: int = 5) -> list[dict]:
 
 
 def researcher_node(state: AgentState) -> dict:
-    # The last message from the supervisor is the sub-task instruction
     last_msg = state["messages"][-1]["content"] if state["messages"] else state["input"]
-    log.info("researcher", task_id=state["task_id"], subtask=last_msg[:80])
+    subtask = parse_subtask(last_msg)
+    log.info("researcher", task_id=state["task_id"], subtask=subtask[:80])
 
-    results = _web_search(last_msg)
+    results = _web_search(subtask)
 
     if results:
-        results_text = "\n\n".join(
-            f"[{i+1}] {r.get('title', '')}\n{r.get('body', '')}"
-            for i, r in enumerate(results)
-        )
+        clean_parts = []
+        for i, r in enumerate(results):
+            body = r.get("body", "")
+            if _check_injection(body):
+                log.warning("injection_detected", source=r.get("href", ""), query=subtask[:60])
+                body = "[Content filtered: possible prompt injection detected]"
+            clean_parts.append(f"[{i+1}] {r.get('title', '')}\n{body}")
+        results_text = "\n\n".join(clean_parts)
     else:
         results_text = "No web results found. Answer from your training knowledge if possible."
 
@@ -43,7 +69,7 @@ def researcher_node(state: AgentState) -> dict:
         {
             "role": "user",
             "content": (
-                f"Sub-task: {last_msg}\n\n"
+                f"Sub-task: {subtask}\n\n"
                 f"Search results:\n{results_text}"
                 f"{memory_block}"
             ),

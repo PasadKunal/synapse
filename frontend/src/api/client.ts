@@ -14,6 +14,15 @@ export interface Span {
   output?: object;
 }
 
+export interface MemoryChunk {
+  id: string;
+  content: string;
+  task_id: string | null;
+  task_input: string | null;
+  created_at: string;
+  similarity: number | null;
+}
+
 export interface AuthResponse {
   access_token: string;
   token_type: string;
@@ -72,6 +81,13 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ thumbs_up: thumbsUp }),
     }),
+
+  getTaskSpans: (taskId: string) => request<Span[]>(`/tasks/${taskId}/spans`),
+
+  listMemory: (query?: string) => {
+    const url = query ? `/memory/?query=${encodeURIComponent(query)}` : "/memory/";
+    return request<MemoryChunk[]>(url);
+  },
 };
 
 export function openSpanSocket(
